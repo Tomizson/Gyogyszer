@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d6b73">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Gyógyszerdózis Gyakorló</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+</head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: egyoszlopos „műszerfal”, fent ragadós fülsor; tartalom max 760px, kártyák csak a feladatnál */
+:root{
+  --bg:#f3f5f6; --surface:#ffffff; --ink:#14232b; --muted:#5b6b73; --line:#d8dfe2;
+  --accent:#0d6b73; --accent-ink:#ffffff; --amber:#d98a0b; --amber-soft:#fbefd9;
+  --good:#1d7a45; --good-soft:#e2f2e8; --bad:#b3261e; --bad-soft:#fbe4e2;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f171b; --surface:#16222a; --ink:#e4ecef; --muted:#93a4ab; --line:#2a3a42;
+  --accent:#4fb3ba; --accent-ink:#06191c; --amber:#f0a92f; --amber-soft:#3a2c12;
+  --good:#5cc489; --good-soft:#14301f; --bad:#ff8a80; --bad-soft:#3a1715; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f171b; --surface:#16222a; --ink:#e4ecef; --muted:#93a4ab; --line:#2a3a42;
+  --accent:#4fb3ba; --accent-ink:#06191c; --amber:#f0a92f; --amber-soft:#3a2c12;
+  --good:#5cc489; --good-soft:#14301f; --bad:#ff8a80; --bad-soft:#3a1715; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-block:10px 4px}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:26px;letter-spacing:.02em;margin:0;text-transform:uppercase;line-height:1.1}
+.brand h1 span{color:var(--amber)}
+.score{font-family:var(--f-mono);font-size:13px;color:var(--muted);white-space:nowrap}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs button{flex:0 0 auto;border:0;background:none;color:var(--muted);font:600 14px var(--f-body);padding:10px 12px;border-bottom:3px solid transparent;cursor:pointer}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--amber)}
+main{padding-block:18px 48px;display:grid;gap:16px}
+h2{font-family:var(--f-display);font-weight:700;text-transform:uppercase;letter-spacing:.03em;font-size:22px;margin:0;text-wrap:balance}
+.lead{color:var(--muted);margin:0;max-width:65ch}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font:500 13px var(--f-body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn{border:0;border-radius:8px;padding:11px 18px;font:600 15px var(--f-body);cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:14px;min-width:0}
+.eyebrow{font:600 11px var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.q{font-size:18px;font-weight:600;white-space:pre-line;margin:0}
+.q .drug{font-family:var(--f-display);font-size:24px;letter-spacing:.02em;text-transform:uppercase;display:block}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:12px 14px;font:400 14.5px/1.45 var(--f-body);cursor:pointer;white-space:pre-line;min-width:0;overflow-wrap:anywhere}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.right{background:var(--good-soft);border-color:var(--good)}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.opt:disabled{cursor:default}
+.answer{white-space:pre-line;background:var(--bg);border-radius:10px;padding:12px 14px;overflow-wrap:anywhere}
+.verdict{font-weight:600}
+.verdict.ok{color:var(--good)} .verdict.no{color:var(--bad)}
+.task{font-family:var(--f-mono);font-weight:600;font-size:40px;letter-spacing:-.01em;text-align:center;padding-block:8px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.task small{display:block;font:500 14px var(--f-body);color:var(--muted);letter-spacing:0;white-space:pre-line}
+.ansrow{display:flex;gap:8px;flex-wrap:wrap}
+.ansrow input{flex:1 1 140px;min-width:0;font:600 22px var(--f-mono);padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-align:center}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+label.f input,label.f select{font:500 16px var(--f-body);padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.uses{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.uses li{border-left:4px solid var(--amber);background:var(--amber-soft);border-radius:0 8px 8px 0;padding:8px 12px;min-width:0;overflow-wrap:anywhere}
+.uses b{font-family:var(--f-display);font-size:17px;letter-spacing:.03em;text-transform:uppercase}
+.uses .ctx{color:var(--muted);font-size:13px;white-space:pre-line}
+.uses .res{font-family:var(--f-mono);font-weight:600}
+.warn{color:var(--bad);font-weight:600}
+.tag{display:inline-block;font:600 11px var(--f-body);letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:var(--line);color:var(--ink);vertical-align:2px;margin-left:4px}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;font-size:13px;width:100%}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+th{font:600 12px var(--f-body);color:var(--muted);background:var(--bg);position:sticky;top:0}
+td.l,th.l{text-align:left;white-space:normal;min-width:180px;max-width:260px;position:sticky;left:0;background:var(--surface)}
+th.l{background:var(--bg)}
+td.l small{display:block;color:var(--muted)}
+td.num{font-family:var(--f-mono);font-weight:500}
+.big{font:600 34px var(--f-mono);font-variant-numeric:tabular-nums}
+.steps{font-family:var(--f-mono);font-size:13.5px;white-space:pre-line;background:var(--bg);border-radius:10px;padding:12px 14px;overflow-wrap:anywhere}
+.drugchips{display:flex;flex-wrap:wrap;gap:6px;max-height:320px;overflow:auto;padding:2px}
+.drugchips .chip{font-size:12px;padding:4px 10px}
+.note{font-size:12.5px;color:var(--muted);max-width:70ch}
+.wronglist{display:grid;gap:6px;font-size:13.5px}
+.wronglist div{border-bottom:1px dashed var(--line);padding-bottom:6px;white-space:pre-line;overflow-wrap:anywhere}
+.toast{font-size:13.5px;padding:10px 12px;border-radius:8px;background:var(--good-soft);color:var(--ink)}
+.toast.err{background:var(--bad-soft)}
+@media (prefers-reduced-motion:no-preference){.opt,.chip,.btn{transition:background .15s,border-color .15s}}
+@media (max-width:480px){.task{font-size:32px}.brand h1{font-size:22px}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Gyógyszer<span>dózis</span> gyakorló</h1><div class="score" id="score"></div></div>
+    <nav class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-tab="kviz">Kvíz</button>
+      <button role="tab" data-tab="szorzas">Számolás</button>
+      <button role="tab" data-tab="perf">Perfúzor</button>
+      <button role="tab" data-tab="tabla">Testtömeg-táblázat</button>
+      <button role="tab" data-tab="beall">Tábla és szűrés</button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap"><main id="main">
+
+<!-- KVÍZ -->
+<section data-panel="kviz" class="panel" hidden>
+  <h2>Kvíz</h2>
+  <div class="row" id="qtypes"></div>
+  <div class="row">
+    <button class="chip" id="modeMc" aria-pressed="true">Feleletválasztós</button>
+    <button class="chip" id="modeCard" aria-pressed="false">Kártya (önellenőrzés)</button>
+  </div>
+  <div class="card" id="quizCard"></div>
+  <details id="wrongBox" hidden><summary>Elrontott kérdések ebben a körben</summary><div class="wronglist" id="wrongList"></div></details>
+</section>
+
+<!-- SZORZÁS -->
+<section data-panel="szorzas" class="panel" hidden>
+  <h2>Számolás testtömegre</h2>
+  <p class="lead">A tábla kg-alapú adagjaiból (mg/ttkg, mikrog/ttkg, ttkg × szorzó) kap feladatot. A válasz után kiírja, melyik gyógyszereknél jön elő ugyanez a szorzó.</p>
+  <div class="row">
+    <button class="chip" id="mxAll" aria-pressed="true">Felnőtt + gyermek</button>
+    <button class="chip" id="mxAd" aria-pressed="false">Csak felnőtt</button>
+    <button class="chip" id="mxCh" aria-pressed="false">Csak gyermek</button>
+    <button class="chip" id="mxHint" aria-pressed="false">Gyógyszer mutatása előre</button>
+  </div>
+  <div class="card" id="mathCard"></div>
+</section>
+
+<!-- PERFÚZOR -->
+<section data-panel="perf" class="panel" hidden>
+  <h2>Perfúzor</h2>
+  <p class="lead">Gyakorló feladat a tábla időegységes adagjaiból (…/ttkg/perc, …/ttkg/óra), alatta szabad kalkulátor.</p>
+  <div class="card" id="perfCard"></div>
+  <div class="card">
+    <div class="eyebrow">Kalkulátor</div>
+    <div class="grid2">
+      <label class="f">Adag<input id="pcDose" inputmode="decimal" value="0,1"></label>
+      <label class="f">Egység<select id="pcUnit">
+        <option value="mikrog|kg|perc">mikrog/ttkg/perc</option>
+        <option value="mg|kg|óra">mg/ttkg/óra</option>
+        <option value="NE|kg|óra">NE/ttkg/óra</option>
+        <option value="mikrog||perc">mikrog/perc</option>
+        <option value="mg||óra">mg/óra</option>
+        <option value="NE||óra">NE/óra</option>
+      </select></label>
+      <label class="f">Testtömeg (kg)<input id="pcW" inputmode="decimal" value="70"></label>
+      <label class="f">Hatóanyag a fecskendőben<input id="pcAmt" inputmode="decimal" value="1"></label>
+      <label class="f">Mennyiség egysége<select id="pcAmtU"><option>mg</option><option>mikrog</option><option>NE</option><option>g</option></select></label>
+      <label class="f">Hígítás (ml)<input id="pcVol" inputmode="decimal" value="50"></label>
+    </div>
+    <div><div class="eyebrow">Sebesség</div><div class="big" id="pcOut">–</div><div class="steps" id="pcSteps"></div></div>
+  </div>
+</section>
+
+<!-- TÁBLÁZAT -->
+<section data-panel="tabla" class="panel" hidden>
+  <h2>Testtömeg-táblázat</h2>
+  <p class="lead">A kiválasztott gyógyszer minden kg-alapú adagja kerek testtömegekre kiszámolva.</p>
+  <div class="grid2">
+    <label class="f">Gyógyszer<select id="tbDrug"></select></label>
+  </div>
+  <div id="tbOut" style="display:grid;gap:14px"></div>
+</section>
+
+<!-- BEÁLLÍTÁS -->
+<section data-panel="beall" class="panel" hidden>
+  <h2>Tábla és szűrés</h2>
+  <div class="card">
+    <div class="eyebrow">Adatforrás</div>
+    <div id="srcInfo"></div>
+    <div class="row">
+      <label class="btn" for="xlsIn" style="display:inline-block">Excel betöltése</label>
+      <input type="file" id="xlsIn" accept=".xlsx,.xls,.xlsm" hidden>
+      <button class="btn ghost" id="resetSrc">Beépített tábla visszaállítása</button>
+    </div>
+    <div id="srcMsg"></div>
+    <p class="note">Az Excel szerkezete maradjon olyan, mint most: fejléc a HATÓANYAG, GYÁRI NÉV, KISZERELÉS, DÓZIS (FELNŐTT / GYERMEK), INDIKÁCIÓ, KONTRAINDIKÁCIÓ, MELLÉKHATÁS, KÖLCSÖNHATÁS, EGYÉB oszlopokkal. Új sor, új gyógyszer, módosított adag mehet bátran. A betöltött tábla ezen az eszközön megmarad. Az első betöltéshez internet kell.</p>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><div class="eyebrow">Gyakorolt gyógyszerek (<span id="selCount"></span>)</div>
+      <div class="row"><button class="chip" id="selAll">Mind</button><button class="chip" id="selNone">Egyik sem</button></div></div>
+    <div class="drugchips" id="drugChips"></div>
+  </div>
+  <p class="note">Tanulási segédlet. Az adagok a betöltött táblából származnak, a gyakorló feladatok hígításai generáltak. Ellátásnál mindig a hatályos protokoll az irányadó.</p>
+</section>
+
+</main></div>
+
+<script>
+const BUILTIN_GRID = [["HATÓANYAG", "GYÁRI NÉV", "KISZERELÉS", "DÓZIS", "DÓZIS", "INDIKÁCIÓ", "KONTRAINDIKÁCIÓ", "MELLÉKHATÁS", "GYÓGYSZERKÖLCSÖNHATÁSOK\n(Mivel adni igyényel figyelmet)", "EGYÉB MEGJEGYZÉS"], ["HATÓANYAG", "GYÁRI NÉV", "KISZERELÉS", "FELNŐTT", "GYERMEK", "INDIKÁCIÓ", "KONTRAINDIKÁCIÓ", "MELLÉKHATÁS", "GYÓGYSZERKÖLCSÖNHATÁSOK\n(Mivel adni igyényel figyelmet)", "EGYÉB MEGJEGYZÉS"], ["ADENOZIN", "ADENOCOR", "6 mg/2 ml", "6 mg, utána 12 mg, utána 18 mg", "0,1-0,2 mg/ttkg", "Supraventricularis tachycardia", "Sick sinus szindróma, AV blokk", "Palpitáció, bradycardia, hypotenzió", "Verapamil", "Gyors bolus két fecskendővel"], ["ADRENALIN", "TONOGEN", "1 mg/1 ml", "Újraélesztésben: 1 mg (3-5 percenként)\nAnaphylaxia IM:\n0,3-0,5 mg, 5 percenként ismételhető\nAnaphylaxia IV:\n50 mikrog [10es higításból 0,5 ml, 50esből 2,5 ml]\nKeringéstámogatás:\nPerfúzor: 50-es higításnál: ttkg*0,3-ttkg*3\nPush dose (\"rescue\"): 10-es (100 mikrog/ml) vagy 100-as (10 mikrog/ml) higítás\n20-100 mikrog (0,2-1 / 2-10 ml)\nBradycardia: 50-es higításnál 6-30 ml/h (2-10 mikrog/p)", "CPR: 10 mikrog/ttkg = 10es higításnál: ttkg/10 vagy 0,1ml/ttkg\nAnaphylaxia IM: \n12 év felett: 0,5 mg\n6-12 év között: 0,3 mg\n6 év alatt: 0,15 mg\nAnaphylaxia IV:\n1 mikrog/ttkg v. perfúzor, mint felnőttnél\nCroup: 0,5ml/ttkg max 5ml nebulizálva", "Anafilaxia, CPR, asystole", "Nem ismert abszolút kontraindikáció", "Tachycardia, aritmia, hipertenzió", "MAO-gátlók", "(-)"], ["ALTEPLASE", "ACTILYSE", "50 mg poramp. / 20 mg poramp.\n50 ml / 20 ml oldószerrel", "Stroke: 0,9 mg/ttkg max 90 mg\naz adag 10%-a bólusban, a \nmaradék perfúzorban 1h alatt\nPE: 100mg 2h alatt\n Arrest: 0,6mg/ttkg 15perc alatt (max 50mg)", "(-)", "Stroke, PE", "Aktív vérzés, intracranialis vérzés", "Vérzés, hipotenzió", " Antikoagulánsok", "(-)"], ["AMIODARON", "CORDARON", "150 mg/3 ml", "VF/VT esetén: 3.sokk után 300mg\n5.sokk után 150 mg\nSzéles reguláris ritmuszavar: 300 mg 30-60 p. (20-ra higítva 120-20 ml/h) perfúzorban majd 900 mg/24h (24re higítva 1ml/h)\n(OMSZ-nál 450mg 45-re higítva, először 90ml/h 20 percig aztán 4ml/h\n  Instabil esetben 300 mg 10-20 p. (20-ra higítva 120-60 ml/h) ", "5mg/ttkg\nTelítő dózis: 15mg/ttkg/24 óra", "Újraélesztésben\nInstabil tachycardiákban, stabil széles QRS reguláris tachycardiakban\nPF:\nha preexcitatio van, de nincs procainamid\ndekompenzált szívelégtelenség (BB vagy CCB kontraindikált)", "Sick sinus, AV blokk, jódallergia / pajzsmirigybetegség (amiodaronban jód van)\nTerhességben (főleg 1. trimszeszterben) nem ajánlott\nTdP, hosszú QT szindróma esetén tilos\nSzoptatás alatt kontraindikált", "Hypotenzió, bradycardia, májkárosodás, QTc megnyúlás", " Digoxin, warfarin", "5%-os glükózzal higítva\nTorsades esetén tilos"], ["AMLODIPIN", "AMLODIPIN\nNORMODIPINE", "5-10mg/tbl.", "5mg, max napi 10mg", "(-)", "Hipertónia, angina pectoris", "Súlyos aortasztenózis, kardiogén sokk", "Fejfájás, ödéma, szédülés", "Más CCB-k, BB, Digoxin", null], ["ASA", "ASPIRIN", "300-500 mg/tbl.\n", "Telítés: 300 mg (2-5 mg/ttkg)\nLáz és fájd.csillapításra: 10-15 mg/ttkg", "(-)", "Fájdalomcsillapítás, lázcsillapítás, gyulladáscsökkentés, trombózis megelőzése", "Aktív fekélybetegség, vérzési rendellenességek, asztma\nTerhességben (különösen a harmadik trimeszterben) tilos\nSzoptatás alatt tilos", "Gyomorvérzés, gyomorfekély", "(-)", "Étellel együtt adandó"], ["ATROPIN", "ATROPINUM SULFURICUM ", "1 mg/ 1 ml", "Átalánosan: 10-20 mikrog/ttkg\nInstabil bradycardia: 500 mikrog, max 3g összdózisig\nAlkilfoszfátmérgezés: 1-3 mg kezdődózis, majd a dózis duplázása 5-10 percenként cholinerg tünetekig", "10-20 mikrog/ttkg", "Bradycardia, organofoszfát mérgezés", "Zárt zugú glaukóma, III. fokú AV blokk vagy magasfokú AV blokk széles kamrai komplexummal, szívtranszplantáció", "Szájszárazság, tachycardia, homályos látás", "Demeklociklin, noradrenalin, lítium, heparin vagy alkohol egyidejű alkalmazása csökkentheti az argipresszin antidiuretikus hatását.", "Minden megtartott keringésű gyerek intubációjához előkészíteni"], ["B1-VITAMIN / TIAMIN ", "(-)", "50 mg/ 1 ml", "50-100 mg", "(-)", "Wernicke-Korsakoff szindróma, alkoholizmus", "(-)", "Ritka allergiás reakciók, bőrpír, viszketés", "(-)", "(-)"], ["CA-GLUCONICUM", "CALCIMUSC 10%\nCALCIUM GLUCONATE HAMELN", "500 mg/ 5 ml\n95 mg/ml", "Hyperkalaemia:\n10-30 ml Ca-gluconate 10 perc alatt (praktikusan 100-as sóban) [digoxin szedés esetén NE!] TILOS NaHCO3-mal egy vénán!\nÚjraélesztésben (hyperkalaemia):\n30 ml bólus\nPolytrauma:\n0,5-1 gr (5-10 ml) lassan (100-as sóban)\nHypocalcaemia:\n10-20 ml higítatlanul 10 perc alatt perfúzorban", "Hyperkalaemia:\nmax 1 ml/ttkg 24 óra alatt (újszülötteknél 0,5 ml/ttkg\nÚjraélesztésben (hyperkalaemia):\n0,6 ml/ttkg bólus\nPolytrauma:\n10-20 mg/ttkg (0,1-0,2 ml/kg)", "Hypocalcaemia, hyperkalaemia, CCB mérgezés, tetánia, hypermagnesaemia", "Hypercalcaemia, vesekő, súlyos vesekárosodás", "Bradycardia, arritmia, hypercalcaemia", "Digoxin, CCB", "Lassú iv. beadás"], ["CAPTOPRIL", "TENSIOMIN", "12,5 mg/tbl", "0,5-1 tbl., sz.e. 15-30 perc múlva ismételhető", "(-)", "Hipertónia, szívelégtelenség, diabéteszes nefropátia, ACS után", "Angioödéma kórtörténetben, súlyos vesekárosodás, hyperkalaemia\nTerhességben, szoptatás alatt nem adható", "Hypotenzió, köhögés, hyperkalaemia, vesefunkciós zavarok", "Káliumspóroló diuretikumok, NSAID-ok, líthium", "(-)"], ["CEFTRIAXONE", "CEFTRIAXON", "1 g / 10 ml", "NaCl-dal vagy 5%-os glükózzal oldva, 2 g 5 perc alatt\nVaricealis UGIB esetén 1g/24h", "2 ampullát 40-re higítás esetén 50 mg/ml\n12 év alatt: 100 mg/ttkg 30p\n15 nap felett: 100 mg/ttkg 60p\n15 nap alatt: 50 mg/ttkg 60p ", "Szepszis, meningitis, kiterjedt lágyrész sérülés", "Súlyos penicillin allergia", "Hamenés, colitis", "Ca tartlamú oldatok, aminoglikozidok", "Újszülötteknél óvatosan"], ["CHLOROPYRAMIN", "SUPRASTIN", "20 mg/1 ml", "Anaphylaxia: 10 mg (OMSZ-nál 20 mg)", "Anaphylaxia: \n14 év felett: 5 mg (OMSZ: 20 mg)\n6-14 év között: 2,5 mg (OMSZ: 10-20 mg)\n6 év alatt: 250 mikrog/ttkg (OMSZ 10 mg)\n1 év alatt (OMSZ: 5 mg im.)", "Allergiás reakciók, angioödéma", "Asztmás roham, zártzúgú glaucoma\nTerhességben (különösen 1. trimeszter), szoptatásban nem ajánlott", "Álmosság, szájszárazság, szédülés, tachycardia", "Alkohol, KIR-re ható depresszánsok, MAO-gátlók", "Lassú iv. beadás, higítva"], ["CLOPIDOGREL", "PLAVIX", "75 mg/tbl.", "ACS: 600 mg\nHa ismert klopidogrél szedő / NSTEMI: 300 mg", "(-)", "Trombózis megelőzése, szívinfarktus, stroke, perifériás artériás betegség", "Aktív vérzés,\nTerhesség, szoptatás alatt nem ajánlott", "Vérzés, hematoma, gyomorfájdalom, fejfájás", "PPI, k-vitamin antagonisták, NSAID-ok", "(-)"], ["DEXAMETHAZON", "DEXAMETAZON", "4 mg/tbl.", "Krupp: 8 mg\nIM inj.: Fenyegető koraszülés 12 óránként 6 mg dózisban 4 adagban\nICP fokozódás: 10-20 mg iv. , utána 4-6 mg iv. 6 óránként", "Krupp:\n15-20 kg: 6 mg\n10-15 kg: 4 mg\n10 kg alatt: 2 mg", "Gyulladásos és autoimmun betegségek, allergiás reakciók, agyi ödéma, súlyos asztma, kemoterápia által kiváltott hányinger", "Szepszis, ha nem kab AB-t\nTerhességben (különösen 3. trimeszter) óvatosan\nSzoptatás alatt nem ajánlott", "Hyperglykaemia, súlygyarapodás, immunszuppresszió, osteoporosis, mellékvese szuppresszió", "NSAID-ok, AC-k, digoxin, diuretikumok", "(-)"], ["DIKLOFENÁK", "DICLOFENAC ", "50 mg/tbl.\n100 mg/tbl.", "Napi max 150 mg", "Nem adható", "Fájdalomcsillapítás, gyulladáscsökkentés, rheumatoid arthritis, osteoarthritis, spondylitis ankylopoetica, dysmenorrhoea", "Aktív fekélybetegség, gastrointestinalis vérzés, súlyos máj- vagy vesekárosodás, súlyos szívelégtelenség\nTerhesség 3. trimeszterben, szoptatásban nem ajánlott\nACS!", "Gyomorpanaszok, fekélyek, májkárosodás, fejfájás, szédülés, bőrkiütés", "AC, NSAID-ok, diuretikumok, lítium", "Étellel szedje!"], ["DIKLOFENÁK", "VOLTAREN", "75 mg/3 ml", "75 mg egyszeri dózis 2-3 perc alatt", "(-)", "Fájdalomcsillapítás, gyulladáscsökkentés, rheumatoid arthritis, osteoarthritis, spondylitis ankylopoetica, dysmenorrhoea", "Aktív fekélybetegség, gastrointestinalis vérzés, súlyos máj- vagy vesekárosodás, súlyos szívelégtelenség\nTerhesség 3. trimeszterben, szoptatásban nem ajánlott\nACS!", "Gyomorpanaszok, fekélyek, májkárosodás, fejfájás, szédülés, bőrkiütés", "AC, NSAID-ok, diuretikumok, lítium", "Étellel szedje!"], ["DOBUTAMIN", "DOBUTAMIN", "250 mg poramp.", "2,5-20 mikrog/ttkg/perc\n50 ml-re higítva:\nttkg*0,03=2,5mikrog-os dózis ml/h-ban\nttkg*0,06=5mikrog-os dózis ml/h-ban\nttkg*0,12=10mikrog-os dózis ml/h-ban\nttkg*0,18=15mikrog-os dózis ml/h-ban\nttkg*0,24=20mikrog-os dózis ml/h-ban", "(-)", "Kardiogén sokk, akut szívelégtelenség, alacsony perctérfogatú szindrómák kezelése", "Obstruktív cardiomyopathia, súlyos hypotenzió", "Tachycardia, arrhythmiák, hipertenzió, fejfájás", "MAO-gátlók, béta-blokkolók (hatékonyság csökkenhet), szimpatomimetikumok", "Perfúzórban adagolva"], ["DROTAVERIN", "NO-SPA", "40 mg/2 ml", "0,5-1 mg/ttkg", "(-)", "Simaizomgörcsök kezelése, epeköves rohamok, veseköves rohamok, menstruációs fájdalom, gyomor-bélrendszeri görcsök", "Súlyos máj- vagy vesekárosodás, súlyos szívelégtelenség\nSzoptatás alatt nem ajánlott ", "Fejfájás, szédülés, hypotenzió, bőrpír, hányinger", "Levodopa, egyéb görcsoldók", "Lassú iv. injekció"], ["DROTAVERIN", "NO-SPA", "40 v. 80 mg/tbl.", "120-240 mg/nap", "6-12 éves kor: napi max 80 mg\n12 év felett: napi max 160 mg", "Simaizomgörcsök kezelése, epeköves rohamok, veseköves rohamok, menstruációs fájdalom, gyomor-bélrendszeri görcsök", "Súlyos máj- vagy vesekárosodás, súlyos szívelégtelenség\nSzoptatás alatt nem ajánlott ", "Fejfájás, szédülés, hypotenzió, bőrpír, hányinger", "Levodopa, egyéb görcsoldók", "Lassú iv. injekció"], ["ENOXAPARIN", "CLEXANE", "2000 NE /0,2 ml\n4000 NE /0,4 ml\n6000 NE /0,6ml\n8000 NE/0,8 ml\n10000 NE/1 ml", "100 NE/ttkg napi 1x profilaktikus, napi 2x terápiás dózis (lehet napi 1x 150 NE/ttkg is a terápiás dózis, de a másik a preferált)\nACS STEMI: 1x 3000 NE IV. bólus + 100 NE/ttkg sc. (max 10.000 NE) 75 ÉV FELETT TILOS IV ADNI!\nACS STEMI 75  év felett: 75 NE/ttkg sc. (max 7500 NE)", "(-)", "DVT, PE, PF, instabil angina, NSTEMI", "Aktív vérzés, súlyos vérzési rendellenességek, heparin okozta trombocitopénia (HIT)", "Vérzés, trombocitopénia, allergiás reakciók, injekció helyén fellépő bőrpír", "Egyéb antikoagulánsok, NSAID-ok, trombolitikus szerek (fokozhatják a vérzés kockázatát)", "Monitorozás!"], ["ETAMSZILÁT", "DICYNONE", "250 mg/ 2 ml", "250-500 mg egyszeri bólus", "(-)", "Vérzés megelőzése és kezelése, kapilláris vérzések, műtét utáni vérzés, menstruációs túlzott vérzés (menorrhagia)", "Porphyria\nTerhesség, szoptatás alatt nem ajánlott", "Fejfájás, bőrpír, hányinger, gyomorfájdalom, allergiás reakciók", "(-)", "(-)"], ["ETOMIDAT", "ETOMIDAT-LIPURO", "20 mg/10 ml", "0,15-0,3 mg/ttkg", "0,15-0,3 mg/ttkg", "Érzéstelenítés indukciójára, intubáció, eclampsia-preeclampsia vagy ketamin ellenjavallata esetén", "Adrenokortikalis elégtelenség, szeptikus sokk, anaphylaxia\nTerhesség, szoptatás alatt nem ajánlott", "Adrenoszuppresszió, izommozgások, hányinger, hányás, hypotenzió, légzésdepresszió", "BZD, opioid", "Nem ismételhető"], ["FENTANYL", "FENTANYL", "100 mikrog/2 ml", "1-2 mikrog/ttkg (50-100 ként titrálva, Cardioverzió esetén is) \nOMSZ-nál PM: 0,5-1 mikrog/ttkg\nIN: 1-2 mikrog/ttkg", "0,5-2 mikrog/ttkg", "Erős fájdalomcsillapítás, anesztézia, perioperatív fájdalomcsillapítás, krónikus fájdalom kezelése (transzdermális tapasz formájában", "Súlyos légzésdepresszió, opioid intolerancia, súlyos központi idegrendszeri depresszió\nTerhességben, szoptatás alatt nem ajánlott", "Légzésdepresszió, szedáció, bradycardia, hypotenzió, hányinger, székrekedés", "BZD, MAO-gátlók, opioidok", "Titrálva adandó"], ["FENITOIN", "EPANUTIN", "250 mg/5 ml", "Telítő dózis: 15 mg/ttkg, 50 mg/perc max\nkb. 20 perc alatt\n(Az autón 5 ampulla van)", "15-20 mg/ttkg", "Epilepszia, különösen tónusos-klónusos (grand mal) rohamok és parciális rohamok kezelése, status epilepticus kezelése", "Sinus bradycardia, AV-blokk, Adams-Stokes-szindróma, túlérzékenység fenitoinra vagy egyéb hidantoin-származékokra\nTerhességben, szoptatásban nem ajánlott", "Nystagmus, ataxia, zavartság, gingiva hyperplasia, hypotenzió (gyors infúzió esetén), aritmiák, bőrkiütések, hepatotoxicitás, Stevens-Johnson szindróma, agranulocitózis", "CYP3A4-induktor (számos gyógyszer metabolizmusát módosítja), antikoagulánsok (csökkenthetik a hatékonyságukat), kortikoszteroidok (csökkent hatékonyság), orális fogamzásgátlók (csökkent hatás), egyéb központi idegrendszeri depresszánsok (fokozott szedáció)", "Folyamatos monitorozás szükséges a plazmaszintek és mellékhatások, különösen a szívfrekvencia és vérnyomás tekintetében, különösen gyors infúzió esetén. A fenitoin plazmaszintjének fenntartása fontos a terápiás hatékonyság és a toxicitás megelőzése érdekében"], ["FIBRINOGÉN", "HAEMOKOMPLETTÁN", "2 g porampulla", "Mindig  tranexámsav után, 100 ml-re NaCl-dal higítva\nFelnőtteknél a dózis 2 g (25-100 mg/ttkg)\n1,5 g/l fibrinogénszint alatt", "50 mg/kg (2,5 ml/kg)", "Vérzés, fibrinogénhiány", "DIC", "Thromboembólia, láz, hányinger, allergia", "Egyéb véralvadásgátlók, trombolitikumok (növelhetik a vérzési vagy trombózis kockázatát)", "Fibrinogénszint mérése!"], ["FLUMAZENIL", "ANEXATE", "0,5 mg/5 ml", "0,3 mg kezdő dózis, szükség szerint 1 perc múlva 0,1 mg, amely ismételhető", "2 mikrog/ttkg\nEgyszeri max. 0,2 mg Összesen max. 1 mg", "BZD túladagolás, műtéti ébresztés", "Benzodiazepin-dependencia, epilepsziás rohamok a kórtörténetben, benzodiazepinnel történő kevert mérgezés (például TCA-k)", "Görcsrohamok, hányinger, hányás, szorongás, szédülés", "BZD, TCA", "Rövid hatású"], ["FUROSEMID", "FURON", "20 mg/2 ml", "0,5-1,5 mg/ttkg (20-40 mg-onként titrálva)", "0,5-1 mg/ttkg", "Akut és krónikus ödémák kezelése (szívelégtelenség, vesebetegség, májcirrózis okozta ödéma), hipertónia, tüdőödéma", "Súlyos elektrolitzavarok (pl. hypokalemia, hyponatremia), dehidráció, anuria, májkóma\nTerhesség, szoptatás alatt nem ajánlott", "Hypokalemia, dehidráció, hypotenzió, vesefunkciós zavarok, halláskárosodás (nagy dózisok esetén)", "Digoxin (hypokalemia miatt fokozott toxicitás), NSAID-ok (csökkentett hatékonyság), lítium (növeli a lítiumszintet)", "Rendszeres kontroll szükséges"], ["GLUKAGON", "GLUCAGEN-HYPOKIT", "1 mg + 1 ml", "Hypoglycaemia: 0,5-1 mg\nBéta-blokkoló mérgezés: 5-10 mg \nAnaphylaxia 1-5 mg, BB szedéskor IV v. IM\nBradycardia: 1 vagy 5öbb 3-10 mg bolus 1-2 perc alatt, ha hatásos, 2-5 mg/h perfúzorral", "Hypoglycaemia:\n30 mikrog/ttkg\n25 kg alatt: 0,5 mg\n25 kg felett: 1 mg\nAnaphylaxia: 20-30 mikrog/ttkg IV", "BB mérgezés, CCB mérgezés, hypoglycaemia", "Pheochromocytoma, inzulinóma", "Hányinger, hányás, allergiás reakciók, magas vérnyomás, tachycardia", "Orális antidiabetikumok, béta-blokkolók (glükagon ellensúlyozhatja a béta-blokkolók hatását mérgezés esetén)", "Használata után enni vagy inni szükséges hypoglycaemia visszatérése ellen!"], ["GLÜKÓZ", "GLUCOSUM 20%", "22 g/100 ml", "1-1,5ml/ttkg 20%osból", "10%osból:\nGyermekek: 2,5 ml/ttkg\nCsecsemők: 2 ml/ttkg", "Hypoglycaemia, hyperkalaemia (inzulin mellett)", "Hyperglykaemia, diabéteszes ketoacidózis, hyperosmoláris kóma, anuria, súlyos dehidráció, intrakraniális vérzés", "Hyperglykaemia, helyi reakciók az injekció helyén (irritáció, tromboflebitisz), folyadékretenció, elektrolitzavarok (pl. hyponatremia)", "Inzulin (a glükózszint csökkenését okozhatja), kortikoszteroidok (növelhetik a vércukorszintet), diuretikumok (elektrolit-egyensúlyzavar kockázata)", "Használata után enni vagy inni szükséges hypoglycaemia visszatérése ellen!"], ["HALOPERIDOL", "HALOPERIDOL", "5 mg/1 ml", "0,05-0,15 mg/ttkg IM (5-10 mg)", "0,05-0,15 mg/ttkg IM\n(max. 5 mg)", "Skizofrénia, akut pszichózis, mánia, súlyos agitáció és izgatottság, Tourette-szindróma", "arkinson-kór, súlyos központi idegrendszeri depresszió, szívbetegségek (pl. QT-megnyúlás)\nTerhesség, szoptatás alatt nem ajánlott", "Extrapiramidális tünetek (akathisia, parkinsonizmus), tardív diszkinézia, QT-megnyúlás, hypotenzió, szedáció, súlygyarapodás", "CNS depresszánsok (fokozott szedáció), QT-megnyúlást okozó gyógyszerek (pl. antiaritmikumok), antikolinerg szerek, antihipertenzív szerek (fokozott hypotenzió kockázata)", "(-)"], ["HEPARIN", "HEPARINE Na", "25000 NE/5 ml", "Thromboembóliás folyamatok (OGYÉI): 5000 NE iv. bolusban, majd 1000 NE/óra folyamatos infúzió formájában\nACS: 5000 NE után infúzió (PTT 1,5-2,5x a cél)\nPE: 5000 NE", "50 NE/ttkg intravénásan, azt követően 20 NE/ttkg/óra folyamatos infúzióban", "ACS, PE, DIC, DVT, CABG műtét", "Aktív vérzés, heparin-indukált trombocitopénia (HIT), súlyos máj- vagy vesebetegség, súlyos hipertónia", "Vérzés, trombocitopénia, osteoporózis (hosszú távú alkalmazás esetén), bőrreakciók, hyperkalemia", "AC-k, NSAID-ok, thrombolitikumok, digoxin", "APTT monitorozás"], ["IBUPROFEN", "IBUPROFEN", "600 mg/ 100 ml", "600 mg 30 p. alatt", "(-)", "Fájdalomcsillapítás, lázcsillapítás, gyulladáscsökkentés, osteoarthritis, rheumatoid arthritis, menstruációs fájdalom, fejfájás, migrén", "Aktív fekélybetegség, gastrointestinalis vérzés, súlyos vesebetegség, súlyos májkárosodás\nTerhesség harmadik trimesztere", "Gyomorpanaszok, gyomorfekély, vérzés, fejfájás, szédülés, bőrkiütés, vesefunkciós zavarok", "AC-k, NSAID-ok, kortikoszteroid (fokozott vérzésveszély), lítium", "Étkezés közben ajnálott bevenni"], ["IBUPROFEN", "NUROFEN", "60-125 mg/kúp", "(-)", "6 kg v 3 hónap alatt TILOS!\n3hó-2év: 1 kúp (60 mg)\n2év felett: 2 kúp (120 mg)\nP.R. 10mg/ttkg", "Fájdalomcsillapítás, lázcsillapítás, gyulladáscsökkentés, osteoarthritis, rheumatoid arthritis, menstruációs fájdalom, fejfájás, migrén", "Aktív fekélybetegség, gastrointestinalis vérzés, súlyos vesebetegség, súlyos májkárosodás\nTerhesség harmadik trimesztere", "Gyomorpanaszok, gyomorfekély, vérzés, fejfájás, szédülés, bőrkiütés, vesefunkciós zavarok", "AC-k, NSAID-ok, kortikoszteroid (fokozott vérzésveszély), lítium", "Étkezés közben ajnálott bevenni"], ["IBUPROFEN", "NUROFEN", "20 mg/ml szuszpenzió", "(-)", "Napi 20-30 mg/ttkg", "Fájdalomcsillapítás, lázcsillapítás, gyulladáscsökkentés, osteoarthritis, rheumatoid arthritis, menstruációs fájdalom, fejfájás, migrén", "Aktív fekélybetegség, gastrointestinalis vérzés, súlyos vesebetegség, súlyos májkárosodás\nTerhesség harmadik trimesztere", "Gyomorpanaszok, gyomorfekély, vérzés, fejfájás, szédülés, bőrkiütés, vesefunkciós zavarok", "AC-k, NSAID-ok, kortikoszteroid (fokozott vérzésveszély), lítium", "Étkezés közben ajnálott bevenni"], ["IBUPROFEN", "IBUSTAR", "400 mg/tbl.", "200-400 mg, napi max 1200 mg", "20-29kg: 200 mg, napi max 600 mg\n30-39kg: 200 mg, napi max 800 mg", "Fájdalomcsillapítás, lázcsillapítás, gyulladáscsökkentés, osteoarthritis, rheumatoid arthritis, menstruációs fájdalom, fejfájás, migrén", "Aktív fekélybetegség, gastrointestinalis vérzés, súlyos vesebetegség, súlyos májkárosodás\nTerhesség harmadik trimesztere", "Gyomorpanaszok, gyomorfekély, vérzés, fejfájás, szédülés, bőrkiütés, vesefunkciós zavarok", "AC-k, NSAID-ok, kortikoszteroid (fokozott vérzésveszély), lítium", "Étkezés közben ajnálott bevenni"], ["IPRATROPIUM+FENOTEROL", "BERODUAL ", "0,25 mg + 0,5 mg", "20-80 csepp (1-4 ml) 5 ml-re higítva nebulizálva", "10-30 csepp", "COPD, Asztma, hörgőgörcs", "Hypertrophias obstruktív cardiomyopathia, tachycardia", "Tachycardia, palpitáció, szájszárazság, szédülés, fejfájás, remegés", "Egyéb béta-agonisták (fokozott tachycardia kockázat), MAO-gátlók, béta-blokkolók (csökkent hatás)", "Nebulizálva"], ["ISOPRENALIN", "ISUPREL", "0,2 mg/1 ml", "5 mikrog/perc kezdődózis\n20-as higítás 30 ml/h", "(-)", "Bradycardia, Adams-Stokes-szindróma, bronchospasmus, alacsony szívteljesítménnyel járó sokkos állapotok", "Tachyarrhythmia, hypertrophiás obstruktív cardiomyopathia, ", "Tachycardia, palpitáció, hypotenzió, szédülés, fejfájás, angina, tremor", "BB, MAO-gátlók, digoxin", "(-)"], ["INZULIN", "ACTRAPID\nHUMULIN R", "300 NE/3 ml", "Hyperkalaemia:\n10 NE + 25 g glükóz (50 ml 50%-os, 125 ml 20%-os 250 ml 10%-os)\n15-30 perc alatt\nHa 7 mmol/l alatti a cukor, akkor csak 10%-os glükóz 50 ml/h 5 órán át\nDKA:\n0,1 NE/ttkg/h, vagy ha a beteg szed hosszú hatásút, megszokott dózisában\nHa nem csökken legalább 10%-ot az első órában, 0,14 NE/ttkg bólus\n(50 NE/ 50 ml [NaCl 0,9%] higításban = ttkg*0,1 ml/h)\nHa vc. 14 mmol/l alatt, akkor felezni a dózist 0,05 NE/ttkg/h\nHHS:\nHa izolált HHS, akkor folyadékot nem adunk míg a volumenstátusz nem rendezett\n0,05 NE/ttkg/h\nHa nem csökken legalább 10%-ot az első órában, 0,14 NE/ttkg bólus", "(-)", "Hyperglycaemia\nHyperkalaemia\nDKA, hyperosmoláris hiperglikémiás állapot (HHS)", "Hypoglycaemia", "Hipoglikémia, hypokalemia", "Kortikoszteroidok, béta-blokkolók (elfedhetik a hipoglikémia tüneteit), tiazid diuretikumok (hiperglikémiás hatás), ACE-gátlók (fokozhatják az inzulin hatását)", "DKA-ban 1 óra folyadékterápia után!"], ["KÁLIUM KLORID", "KALDYUM\nKÁLIUM-R\nKÁLIUM 7,45% ", "600 mg/caps. (8 mmol / caps.)\n\n745 mg/10 ml (19 mmol / 10 ml)", "Közepes, tünetmentes hypokalaemia:\nK+hiány [mmol] = (ttkg × 0,2) × 2 × (4,5 mmol/l – szérum K+aktuális [mmol/l])\nMax 10 mmol kálium / óra\nKálium 2,5 mmol/l alatt:\n20 mmol kálium / óra, ha 2 mmol/l alatti, akár 40 mmol / óra", "Súlyos, tünetekkel járó hypokalaemia:\n1 mmol/ttkg/óra, a maximális adag pedig 20 mmol/óra lehet", "hypokalaemia kezelése vagy megelőzése (pl. diuretikumok mellett), digitalisz toxicitás megelőzése, izomgyengeség, ritmuszavarok hypokalaemiás hátterének rendezése", "hyperkalaemia, súlyos veseelégtelenség, Addison-kór (kezeletlen), káliummegtakarító diuretikum szedése (pl. spironolakton), dehidratált állapotban, gyomor-bélrendszeri szűkület", "émelygés, hányás, hasi fájdalom, flatulencia, hasmenés, ritkán ulcus, perforáció, hyperkalaemia (ritmuszavar, izombénulás)", "ACE-gátlók, ARB-k, spironolakton, NSAID-ok → hyperkalaemia kockázata nő; antikolinerg szerek → GI mellékhatások fokozódhatnak; digitalisz → hypokalaemia fokozza toxicitását", "(-)"], ["K-VITAMIN", "KONAKION", "10 mg/1 ml", "5- 10 mg iv lassan, FFP-vel vagy PCC-vel együtt", "(-)", "K-vitaminhiány okozta vérzési rendellenességek kezelése és megelőzése, újszülöttek vérzékenységének megelőzése, K-vitamin antagonisták (pl. warfarin) okozta vérzés kezelése", "Túlérzékenység", "Allergiás reakció", "Alvadási faktorok, k vitamin antagonisták", "INR szint monitor"], ["KETAMIN", "CALYPSOL", "500 mg/10 ml\n100 mg/2 ml", "Analgesia iv.: 0,1-0,3 mg/ttkg\nAnalgesia im.: 1-3 mg/ttkg*\nSzedáció+Analgesia iv.: 0,5 mg/ttkg\nSzedáció+Analgesia im.: 5 mg/ttkg*\nAnesztézia: 1-2 mg/ttkg\nPerfúzorban: Dózisa 1-5 mg/ttkg/óra\n4 ml (200 mg) 20-ra higítva (10 mg/ml) / 10 ml (500 mg) 50-re higítva (10 mg/ml):\nttkg*0,1-0,5=dózis ml/h-ban\n [*higítatlanul]", "(-)", "Anesztézia indukciója és fenntartása, fájdalomcsillapítás, sürgősségi szedáció, status asthmaticus, major depresszió (off-label), opioidrezisztens fájdalom", "Súlyos hipertónia, \"intrakraniális nyomásfokozódás\", súlyos kardiovaszkuláris betegségek,\nTerhességben, szoptatásban nem ajánlott", "Hallucinációk, disszociációs tünetek, hipertenzió, tachycardia, nyálfolyás, nystagmus, légzésdepresszió (nagy dózisban)", "Egyéb központi idegrendszeri depresszánsok (fokozhatják a hatást), benzodiazepinek (mérséklik a disszociációs tüneteket), alkohol", "Ketamin használatakor a disszociatív anesztézia állapota lép fel, amelyben a beteg tudatos, de nem érez fájdalmat, ezért monitorozás és nyugtatók alkalmazása javasolt a mellékhatások csökkentésére"], ["KLONAZEPAM", "RIVOTRIL", "1 mg/1 ml", "Status epilepticus esetén: 1 mg bólus (percenként max 0,5mg), ismételhető (max 10mg)\nGörcs prevenció: 1 mg 2-5 perc alatt ", "Status epilepticus esetén: 0,5 mg bólus, ismételhető", "Epilepszia (különösen absence rohamok, myoclonusos és akinetikus rohamok), pánikbetegség, szorongásos zavarok, izomgörcsök", "Súlyos májelégtelenség, súlyos légzési elégtelenség, myasthenia gravis,\nTerhesség és szoptatás alatt nem ajánlott", "Álmosság, izomgyengeség, koordinációs zavarok, légzésdepresszió, szédülés, memóriakárosodás, függőség", "Alkohol, egyéb központi idegrendszeri depresszánsok (pl. opioidok), antipszichotikumok, antidepresszánsok", "Hosszú távú használata függőséget és toleranciát okozhat, ezért fokozatosan csökkenteni kell az adagot a megvonási tünetek elkerülése érdekében"], ["KRISZTALLOID", "ISOLYTE", "500 ml", "(4 mmol/l K, 1,5 mmol/l Mg, 137 mmol/l Na) \n250 ml 3x bólusban\nFenntartó folyadékterápia:\n25-30 [v. 20-25ml]/ttkg/nap + 1 mmol/ttkg/nap Na + 50-100g/nap glükóz\npH: 6,9-7,9", "10 ml/ttkg, anaphylaxia, szepszis esetén akár 60-100 ml/ttkg (szepszisben első órában 40-60 ml/ttkg)", "Intravénás folyadékpótlás és elektrolit-egyensúly fenntartása, dehidráció kezelése, acidózis korrigálása, perioperatív folyadékterápia", "Hyperkalemia, hypernatremia, hyperchloremia, súlyos vesekárosodás", "Elektrolitzavarok (pl. hyperkalemia, hypernatremia), folyadékretenció, túlzott infúzió esetén acidózis vagy alkalozis", "K spóroló diuretikumok (növelhetik a hyperkalemia kockázatát), kortikoszteroidok (folyadékretenció fokozása)", "Az elektrolit- és folyadékháztartás monitorozása fontos a terápia alatt, különösen vesekárosodásban szenvedő betegek esetében"], ["KRISZTALLOID", "NACL 3%", "23 ml 10%-os + 77 ml 0,9%-os", "Hyponatraemia, ha nincsenek súlyos tünetek vagy enyhe:\n1. 24 óra alatt max 10 mmol/l emelkedés (ha májbetegség, hypokalaemia, alkoholizmus, alultápláltság áll fenn, csak 8 mmol/l)\nSúlyos, tünetekkel járó hyponatraemia (125 mmol/l alatt): 150 ml (2 ml/ttkg) 20 perc alatt, utána Na kontroll és ismét 150 ml 20 perc alatt 5 mmol/l emelkedésig (még 2x ismételhető)\nHa 1 óra után nem javul az 5 mmol/l emelkedés ellenére, 1 mmol/l/h fenntartás (tünetek javulásáig, vagy 10 mmol/l szintemelkedéséig)\nKözepesen súlyos, tünetekkel járó (125-129 mmol/l): 150 ml (2 ml/ttkg) 20 perc alatt \nICP fokozódás: 1,4-2,5 ml/ttkg bólus v. 250-500 ml 10-20 perc alatt (ETC szerint: 3,33 ml/ttkg)", "10 ml/ttkg, anaphylaxia, szepszis esetén akár 60-100 ml/ttkg (szepszisben első órában 40-60 ml/ttkg)", "Hyponatremia kezelése, intracranialis nyomás csökkentése (pl. agyi ödéma), súlyos dehidráció, kritikus állapotú betegek kezelésére", "Hypernatremia, súlyos folyadékretenció, szívelégtelenség, vesefunkciós zavar", "Hypernatremia, ödéma, folyadékretenció, túl gyors infúzió esetén centrális pontin myelinolízis", "K spóroló diuretikumok (növelhetik a hyperkalemia kockázatát), kortikoszteroidok (folyadékretenció fokozása)", "Szoros Na monitorozás!"], ["KRISZTALLOID", "NACL 0,9%", "10-100-500-1000 ml", "DKA: \n(balanszírozott oldat is lehet)\nHa RR 90 Hgmm alatt: 500 ml bólus 10-15 perc alatt\nHa RR 90 Hgmm felett: 1000 ml 60 perc alatt\n(szoros kálium monitorozás / adás mellett: 3,5-5,5mmol/l közötti érték esetén 40 mmol/1000 ml fiz.só)\n2. órától: \n1 liter (káliummal) 2 óra alatt, majd\n1 liter (káliummal) 2 óra alatt, majd\n1 liter (káliummal) 4 óra alatt\nHa vc. 14 mmol/l alatti, hozzáadni 10%-os glükózt 125 ml/h-val", "10 ml/ttkg, anaphylaxia, szepszis esetén akár 60-100 ml/ttkg (szepszisben első órában 40-60 ml/ttkg)", "Folyadékpótlás, elektrolit-egyensúly fenntartása, só- és folyadékvesztés kezelése, hipotenzió vagy hypovolemia, intravénás gyógyszerek hígítása, sebek öblítése", "Hypernatremia, súlyos vesefunkciós zavarok, szívelégtelenség, folyadékretenció, túlérzékenység a készítmény összetevőire", "Hypernatremia, ödéma, acidózis, folyadékretenció", "K spóroló diuretikumok (növelhetik a hyperkalemia kockázatát), kortikoszteroidok (folyadékretenció fokozása)", "Az elektrolit- és folyadékháztartás monitorozása fontos a terápia alatt, különösen vesekárosodásban szenvedő betegek esetében"], ["LEVETIRACETAM", "MATEVER\nKEPPRA\nLEVETIRACETAM UCB", "500 mg/5 ml", "60 mg/ttkg, max 4500mg 15 perc alatt\n(max sebesség 5 mg/ttkg/perc)\nutána 1 mg/ttkg/h", "OMSZ: 40 mg/ttkg, max 3000mg\nOGYÉI: 60 mg/ttkg, max 4500mg 15 perc alatt\n(max sebesség 3 mg/ttkg/perc)", "Epilepszia kezelése, parciális és generalizált rohamok, myoclonusos és tonikus-klónusos rohamok", "Szoptatás alatt nem ajánlott, terhesség alatt mérlegelendő", "Álmosság, szédülés, fáradtság, irritabilitás, fejfájás, étvágytalanság, viselkedési zavarok", "Más központi idegrendszeri depresszánsok (pl. alkohol, nyugtatók), antiepileptikumok", "A kezelés során a viselkedésbeli és pszichológiai változások figyelése szükséges, különösen gyermekeknél"], ["LIDOCAINE", "LIDOCAIN", "100 mg/10 ml", "Újraélesztésben (ha nincs amiodaron):\n100 mg 3. sokk után, 50 mg 5. sokk után\nKezdő dózis: 1-2 mg/ttkg (max. 100 mg)\nFenntartó: 1-1,5 mg/ttkg (1-3 mg/p)\nSzéles kamrai komplexumú tachycardia: 50-200 mg, bolus, majd 2-4 mg/p\nI.O. út analgesia: 40 mg 2 perc alatt, 1 perc várakozás, 10 ml sóval öblítés, 20 mg 1 perc alatt", "Újraélesztés: 1 mg/ttkg\nI.O. út: 0,5 mg/ttkg (max 40 mg)", "Kamrai arrhythmiák kezelése (pl. kamrai fibrilláció, kamrai tachycardia), helyi érzéstelenítés szisztémás toxicitása esetén, fájdalomcsillapítás perioperatív körülmények között", "Súlyos SA, AV-blokk (ha nincs pacemaker), súlyos bradycardia, Adams-Stokes-szindróma, túlérzékenység lidokainra vagy amid típusú helyi érzéstelenítőkre", "Légzésdepresszió, hypotenzió, bradycardia, szédülés, hányinger, neurológiai mellékhatások (pl. görcsök), allergiás reakciók", "Egyéb antiaritmiás szerek (proaritmiás hatás fokozódása), béta-blokkolók (fokozott bradycardia kockázata), MAO-gátlók, cimetidin (emelheti a lidokain szintjét)", "A lidokain plazmaszintjének és a szívműködés monitorozása szükséges a kezelés alatt, különösen kamrai arrhythmiák esetén"], ["MAGNESIUM", "MAGNESIUM SULFURICUM 10%", "1 g/10 ml\n2 g/10 ml", "ALS (TdP): 2g iv. (1-2 perc alatt)\nSzéles-irreguláris tachycardia (pl.: Polymorph VT QT megnyúlással): 2 g iv. (10 perc alatt)\nAsthma, COPD: 1-2 g iv. (20 perc alatt)\nFenyegető koraszülés, toxaemiás görcsök: 4 g iv. 20 perc alatt, majd 2-3 g/óra fenntartó\nDigitalis intoxikáció: 2 g iv 5-30 perc alatt, utána 1-2 g/óra fenntartó\nTCA intoxikáció: 2 g iv 5-15 perc alatt, utána 1-2 g/óra fenntartó", "25-50 mg/ttkg", "Hypomagnesemia kezelése, torsades de pointes, preeclampsia és eclampsia kezelése, szívritmuszavarok, digitális toxicitás, akut asztmás rohamok", "Hypermagnesemia, súlyos vesekárosodás", "Hypotenzió, légzésdepresszió, szívritmuszavarok (magas dózisban), bőrpír, izomgyengeség", "Kalciumcsatorna-blokkolók (fokozott hypotenzió kockázata), diuretikumok (fokozhatják a magnéziumszint csökkenését), CNS depresszánsok (fokozott légzésdepresszió)", "Magas dózisú magnézium-infúzió esetén szoros monitorozás szükséges a légzés és szívműködés ellenőrzése érdekében"], ["METAMIZOL", "ALGOPYRIN", "1 g/2 ml", "10-15 mg/ttkg iv.\n10-20 mg/ttkg im.", "10-20 mg/ttkg", "Közepes fájdalomcsillapítás, lázcsillapítás, műtét utáni fájdalom, veseköves rohamok, epegörcsök", "Agranulocitózis, súlyos vesekárosodás, májelégtelenség, hypotenzió, túlérzékenység metamizolra vagy pirazolon származékokra\nTerhesség (különösen 3. trimeszter), szoptatás alatt nem ajánlott", "Agranulocitózis, hypotenzió, anafilaxiás reakciók, vesefunkciós zavarok, bőrkiütések", "Antikoagulánsok (fokozhatják a vérzés kockázatát), egyéb nem szteroid gyulladáscsökkentők (fokozott gyomorirritáció), lítium (növelheti a lítium koncentrációját", "A metamizol nagy dózisban agranulocitózist okozhat, ezért a vérképet rendszeresen ellenőrizni kell hosszú távú használat esetén"], ["METAMIZOL", "ALGOZONE", "500mg/tabl.", "500-1000 mg", "15 évnél fiatalabbnak nem", "Közepes fájdalomcsillapítás, lázcsillapítás, műtét utáni fájdalom, veseköves rohamok, epegörcsök", "Agranulocitózis, súlyos vesekárosodás, májelégtelenség, hypotenzió, túlérzékenység metamizolra vagy pirazolon származékokra\nTerhesség (különösen 3. trimeszter), szoptatás alatt nem ajánlott", "Agranulocitózis, hypotenzió, anafilaxiás reakciók, vesefunkciós zavarok, bőrkiütések", "Antikoagulánsok (fokozhatják a vérzés kockázatát), egyéb nem szteroid gyulladáscsökkentők (fokozott gyomorirritáció), lítium (növelheti a lítium koncentrációját", "A metamizol nagy dózisban agranulocitózist okozhat, ezért a vérképet rendszeresen ellenőrizni kell hosszú távú használat esetén"], ["METILPREDNISOLON", "SOLU-MEDROL", "40 mg poramp. /1 ml oldószer\n125 mg poramp. /2 ml oldószer", "1-2 mg/ttkg, nebulizálva is lehet", "1-2 mg/ttkg, max 40mg", "Súlyos allergiás reakciók (pl. anafilaxia), asztmás rohamok, autoimmun betegségek fellángolása (pl. lupus, rheumatoid arthritis), súlyos gyulladásos állapotok, szervkilökődés megelőzése szervátültetés után, shock állapotok, agyi ödéma csökkentése trauma után", "Szisztémás gombás fertőzések, túlérzékenység kortikoszteroidokra", "Hyperglykaemia, immunrendszer gyengülése, fertőzésekre való hajlam, osteoporosis, Cushing-szindróma, súlygyarapodás, hypernatremia, hypokalemia, izomgyengeség, gyomorfekély", "NSAID-ok (fokozott gyomorvérzés kockázata), antidiabetikumok (csökkent hatékonyság), diuretikumok (fokozott hypokalemia), vakcinák (csökkent immunválasz), CYP3A4-gátlók (emelhetik a metilprednizolon szintjét)", "Hosszú távú alkalmazás esetén fokozatosan csökkenteni kell a dózist a mellékvese elégtelenség megelőzése érdekében, és szükséges a vércukorszint, az elektrolitok és a vérnyomás szoros monitorozása"], ["METOCLOPRAMID", "CERUCAL", "10mg/tbl.", "5-10 mg napi max 3x", "0,1-0,15 mg/ttkg", "Hányinger és hányás kezelése, posztoperatív vagy kemoterápia által kiváltott hányás, gastroesophagealis reflux betegség (GERD), gastroparesis kezelése, migrénhez kapcsolódó hányinger", "Gastrointestinalis vérzés, mechanikus obstrukció vagy perforáció, pheochromocytoma, epilepszia, Parkinson-kór, túlérzékenység metoklopramiddal szemben\nSzoptatás alatt nem ajánlott", "Extrapiramidális tünetek (pl. akathisia, dystonia), szedáció, fejfájás, hypotenzió, hasmenés, ritkán tardív diszkinézia", "Antipszichotikumok (fokozott extrapiramidális mellékhatások), opioidok (fokozott légzésdepresszió), CNS depresszánsok (fokozott szedáció)", "Hosszú távú használata kerülendő a tardív diszkinézia kialakulásának kockázata miatt, különösen idős betegek esetén"], ["METOCLOPRAMID", "CERUCAL", "10 mg/2 ml", "0,05-0,1 mg/ttkg", "0,1-0,15 mg/ttkg", "Hányinger és hányás kezelése, posztoperatív vagy kemoterápia által kiváltott hányás, gastroesophagealis reflux betegség (GERD), gastroparesis kezelése, migrénhez kapcsolódó hányinger", "Gastrointestinalis vérzés, mechanikus obstrukció vagy perforáció, pheochromocytoma, epilepszia, Parkinson-kór, túlérzékenység metoklopramiddal szemben\nSzoptatás alatt nem ajánlott", "Extrapiramidális tünetek (pl. akathisia, dystonia), szedáció, fejfájás, hypotenzió, hasmenés, ritkán tardív diszkinézia", "Antipszichotikumok (fokozott extrapiramidális mellékhatások), opioidok (fokozott légzésdepresszió), CNS depresszánsok (fokozott szedáció)", "Hosszú távú használata kerülendő a tardív diszkinézia kialakulásának kockázata miatt, különösen idős betegek esetén"], ["METOPROLOL", "BETALOC", "5 mg/5 ml", "2,5 mg-os bólusokban 5 percenként, 15 mg összdózisig", "(-)", "Angina pectoris, SVT frekvenciakontrolljára\nPF: ha HFrEF vagy csökkent balkamra funkció vagy CAD ismert vagy POST-MI", "Súlyos bradycardia, másod- és harmadfokú AV-blokk, kardiogén sokk, dekompenzált szívelégtelenség, súlyos perifériás keringési zavarok, súlyos asztma/COPD (ekkor inkább verapamil), preexcitatio", "Bradycardia, hypotenzió, szédülés, fáradtság, szívelégtelenség súlyosbodása, bronchospasmus, hideg végtagok", "Kalciumcsatorna-blokkolók (fokozott bradycardia kockázat), digoxin (fokozott bradycardia), egyéb antihipertenzív szerek (fokozott hypotenzió), inzulin (hipoglikémia jeleit elfedheti)", "Szoros monitorozás szükséges a szívfrekvencia, vérnyomás és szívelégtelenség jeleinek figyelemmel kísérésére, különösen a kezelés kezdetén"], ["METOPROLOL", "BETALOC", "10-50-100mg/tbl.", "Napi 2x 25-50-100 mg, napi max 200 mg", "(-)", "Angina pectoris, SVT frekvenciakontrolljára\nPF: ha HFrEF vagy csökkent balkamra funkció vagy CAD ismert vagy POST-MI", "Súlyos bradycardia, másod- és harmadfokú AV-blokk, kardiogén sokk, dekompenzált szívelégtelenség, súlyos perifériás keringési zavarok, súlyos asztma/COPD (ekkor inkább verapamil), preexcitatio", "Bradycardia, hypotenzió, szédülés, fáradtság, szívelégtelenség súlyosbodása, bronchospasmus, hideg végtagok", "Kalciumcsatorna-blokkolók (fokozott bradycardia kockázat), digoxin (fokozott bradycardia), egyéb antihipertenzív szerek (fokozott hypotenzió), inzulin (hipoglikémia jeleit elfedheti)", "Szoros monitorozás szükséges a szívfrekvencia, vérnyomás és szívelégtelenség jeleinek figyelemmel kísérésére, különösen a kezelés kezdetén"], ["MIDAZOLAM", "DORMICUM", "5 mg/1 ml\n15 mg/3 ml\n50 mg/ 10 ml", "Szedáció: 0,01-0,05 mg/ttkg\nAneszt.indukció: 0,15-0,2 mg/ttkg\nAneszt.fenntartó: 0,03-0,2 mg/ttkg\nConvulsio: IV: 0,1mg/ttkg (2,5-5 mg, max 4 mg OMSZ-nál)\nismételhető 5 perc után újabb max 4 mg-ig\nIM: 40 kg alatt 5, felette 10 mg [szedációra 0,05-0,1 mg/ttkg]\nIN: 0,2 mg/ttkg max 10 mg", "Görcsgátlásra: 0,1-0,3 mg/ttkg\nSzedatívumként: 0,05-0,15 mg/ttkg\nIM: 5 mg", "Szedáció műtétek előtt és alatt, anesztézia indukciója, status epilepticus, intenzív osztályos szedáció, preoperatív anxiolízis, súlyos agitáció kezelése", "Súlyos légzési elégtelenség, akut alkohol-intoxikáció, myasthenia gravis, túlérzékenység benzodiazepinekre vagy midazolamra\nTerhesség, szoptatás alatt nem ajánlott", "Légzésdepresszió, hypotenzió, bradycardia, szedáció, álmosság, szédülés, hányinger, paradox reakciók (izgatottság, agresszió)", "Egyéb központi idegrendszeri depresszánsok (pl. opioidok, alkohol, nyugtatók), CYP3A4-gátlók (fokozzák a midazolam hatását), flumazenil (antagonizálja a hatását)", "Szedációs alkalmazás esetén szoros monitorozás szükséges a légzésdepresszió és a vérnyomáscsökkenés megelőzésére, különösen időseknél vagy légzési nehézségekkel küzdő betegeknél"], ["MORFIN", "MORPHINUM-HIDROCHLORICUM 1%", "10 mg/1 ml", "0,01-0,02 mg/ttkg\nCardioverzió, ha csökkent tudat: 0,05 mg/ttkg\n10-es higításból 2 ml-ként titrálva", "0,025-0,1 mg/ttkg", "Súlyos akut és krónikus fájdalom kezelése (pl. posztoperatív fájdalom, infarktus okozta fájdalom), tüdőödéma okozta légzési nehézségek, anesztézia részeként, palliatív ellátás", "Súlyos légzési depresszió, akut asztmás roham, ileus, koponyaűri nyomásfokozódás, súlyos májkárosodás, túlérzékenység morfinra vagy egyéb opioidokra\nTerhesség, szoptatás alatt nem ajánlott", "Légzésdepresszió, bradycardia, hypotenzió, álmosság, székrekedés, hányinger, hányás, függőség és tolerancia hosszú távú használat esetén", "Egyéb központi idegrendszeri depresszánsok (fokozott légzésdepresszió), MAO-gátlók (súlyos hypotenzió és légzésdepresszió), antikolinerg szerek (fokozott székrekedés), naloxon (antagonista)", "A légzésdepresszió és az esetleges túladagolás miatt szoros monitorozás szükséges, és naloxon, mint antidotum, rendelkezésre kell álljon"], ["NAHCO3 8,4%", "NÁTRIUM-HIDROGÉNKARBONÁT", "20 mmol/20 ml", "Újraélesztésben, ha hyperkalaemia áll a háttérben: 50 mmol bolus\nMetabolikus acidózis alapképletek:\nHa AVG nem elérhető: 4-8 óra alatt 2-5 mmol/ttkg\nVAGY\n1 mmol/ttkg bolus\nVAGY\n0,3*BE*ttkg=ml-ben, egyszerre max a fele (max. sebesség 1,5 ml/ttkg/h)\nVAGY\n0,5*ttkg*[24 - serum HCO3 (mEq/L)]\nVAGY\n0,2*ttkg*BE\nKözepesen súlyos metabolikus acidózis: 50-150 mmol 1 L 5%-os glükózban 1-1,5 l/h sebességgel az első órában\nSúlyos metabolikus acidózis: 90-180 mmol 1 L 5%-os glükózban 1-1,5 l/h sebességgel az első órában\nTCA mérgezés: \n1-2 mmol/ttkg bólus, 3-5 percenként ismételve, amíg javulás nem észlelhető,\nmajd fenntartásra 150 mmol/l 1 liter 5%-os glükózban 1-2 óra alatt\nDKA:\nCsak 7,1-es PH alatt, ha muszáj, 50 mmol 1 L 5%-os glükózban", "(-)", "Metabolikus acidózis kezelése (pl. vesekárosodás, laktát-acidózis), hyperkalemia kezelése, tricyclic antidepressant (TCA) túladagolás, toxinok által okozott acidózis, szívmegállás kezelése reszuszcitáció során, súlyos acidózis mérgezés esetén", "Metabolikus vagy respiratorikus alkalózis, hypernatremia, hypokalemia", "Alkalózis, hypernatremia, hypokalemia, folyadékretenció, ödéma, tetánia, szívelégtelenség súlyosbodása", "Kalciumtartalmú oldatok (precipitáció), diuretikumok (növelhetik a hypokalemia kockázatát), kortikoszteroidok (fokozott nátrium- és folyadékretenció), káliumvesztést okozó gyógyszerek", "A vér pH-értékének és az elektrolitoknak a monitorozása szükséges a kezelés során a túlzott alkalózis és az elektrolitzavarok megelőzése érdekében"], ["NALBUPHIN", "NUBAIN", "20 mg/2 ml", "0,2-0,3 mg/ttkg max. 20 mg", "(-)", "Mérsékelt és súlyos fájdalomcsillapítás, műtét utáni fájdalom kezelése, anesztézia kiegészítéseként, szülés során fellépő fájdalom enyhítése", "Súlyos légzésdepresszió, akut asztmás roham, súlyos májkárosodás, súlyos veseelégtelenség, túlérzékenység nalbufinra vagy egyéb opioidokra\nSzoptatás alatt nem ajánlott", "Légzésdepresszió, szedáció, szédülés, hányinger, hányás, izzadás, álmosság, hypotenzió, ritkán allergiás reakciók", "Egyéb központi idegrendszeri depresszánsok (pl. opioidok, benzodiazepinek, alkohol – fokozott légzésdepresszió), MAO-gátlók (fokozott légzésdepresszió és szedáció), naloxon (opioid antagonistaként hat)", "Nalbuphine letolja a receptorrol a többi opioidot, több órába telik újabb hatást elérni. Probléma, mert analgetikus hatása jóval gyengébb."], ["NALOXONE", "NARCANTI", "0,4 mg/1 ml", "0,4-2 mg iv. sz.e. ismételhető 2-3 percenként\nIN: 0,05 mg/ttkg (8 kg-onként 1 ml)", "10 mikrog/ttkg\n8 ml-re higítva 50mikrog/ml\nIN: 0,05 mg/ttkg (8 kg-onként 1 ml)", "Opioid túladagolás kezelése, opioid okozta légzésdepresszió visszafordítása, opioid által okozott szedáció megszüntetése, diagnosztikai eszközként opioid mérgezés megállapítására", "Abszolút nem ismert", "Hirtelen megvonási tünetek opioidfüggő betegeknél (pl. hányás, hasmenés, izzadás, ingerlékenység), tachycardia, magas vérnyomás, szívritmuszavarok, tüdőödéma", "Opioidok (antagonizálja az opioidok hatásait, visszafordítja a légzésdepressziót és a szedációt)", "Naloxon alkalmazása után az opioidok hatása visszatérhet, különösen hosszú hatású opioidok esetében, ezért több adag vagy folyamatos monitorozás szükséges"], ["NEOSTIGMINE", "NEOSTIGMINE-KALCEKS", "0,5 mg/1 ml", "Myastheia gravis: 0,5 mg IM v. Sc.\nSzékrekedés: 0,5 mg IM v. Sc.\nNem-depolarizáló relaxáns hatás reverzió: 0,5-2 mg lassú IV infúzió + mellé atropin 20 mikrog/ttkg", "Nem-depolarizáló relaxáns hatás reverzió: 0,05 mg/ttkg lassú IV infúzió", "Nem depolarizáló izomrelaxánsok hatásának visszafordítása műtéti anesztézia után, myasthenia gravis kezelése, posztoperatív vizeletretenció és bélatónia kezelése", "Mechanikus bél- vagy húgyúti elzáródás, peritonitis, bradycardia, súlyos asztma, túlérzékenység neostigminre", "Bradycardia, hányinger, hányás, izomgörcsök, hasmenés, fokozott nyálképződés, bronchospasmus, bőrkiütés, izomgyengeség, cholinerg krízis (nagy dózisban)", "Antikolinerg szerek (pl. atropin, csökkenti a neostigmin mellékhatásait), egyéb kolinészteráz-gátlók (fokozott hatás), szívritmus-szabályozó gyógyszerek (fokozott bradycardia)", "A bradycardia megelőzése érdekében gyakran együtt adják atropinnal. A kezelés során szoros monitorozás szükséges a légzés és szívfrekvencia tekintetében, különösen izomrelaxánsok visszafordítása során"], ["NIFEDIPINE", "CORDAFLEX\nCORINFAR", "10 vagy 20 mg tbl. / spray", "Fenyegető koraszülés: 10 mg p.o., 15-20 percenként ismételhető\nEclampsia: 10-20 mg p.o. 30 perc után ismételhető, utána 2-6 óránként", null, "Hypertonia (fenntartó kezelés, retard forma), Stabil / vasospasztikus angina pectoris, Eclampsia/praeeclampsia súlyos hypertonia kezelése, Fenyegető koraszülés (tocolyticumként)", "Akut kardiogén sokk, Instabil angina, friss MI (1–4 hét), Súlyos hypotonia, Túlérzékenység", "Hypotonia, reflex tachycardia, Fejfájás, kipirulás, szédülés, Perifériás ödéma (gyakori), GI panaszok (székrekedés, hányinger), Gingiva-hyperplasia, bőrreakciók (ritka)", "CYP3A4-gátlók (makrolidok, azolok, grapefruitlé) → ↑ szint, hypotonia, CYP3A4-induktorok (rifampicin, fenitoin, barbiturátok) → ↓ hatás, Béta-blokkolók → keringés-összeomlás veszélye, Más vérnyomáscsökkentők, nitrátok → additív hypotonia", "(-)"], ["NITROGLYCERIN", "NITROLINGUAL", "0,4 mg/exp.", "0,4-0,8 mg sz.e. 10 perc múlva ismételhető", "(-)", "Akut angina pectoris, akut miokardiális infarktus, hipertenzív krízis, szívelégtelenség akut kezelése, tüdőödéma", "Súlyos hypotenzió, kardiogén sokk, súlyos anémia, túlérzékenység nitrátokra, súlyos hypovolemia, PDE5-gátlókkal (pl. szildenafil) való egyidejű alkalmazás", "Hypotenzió, fejfájás, szédülés, tachycardia, ájulás, kipirulás, hányinger", "PDE5-gátlók (pl. szildenafil – súlyos hypotenzió), alkohol, antihipertenzív szerek (fokozott hypotenzió)", "Folyamatos monitorozás szükséges a vérnyomásra és a szívfrekvenciára, különösen nagy dózisú infúziók esetén"], ["NITROGLYCERIN", "NITROPOHL", "10 mg/10 ml", "50-es higítás:\n5-50 ml/h (1-10 mg/h) klinikai kép alapján", "(-)", "Akut angina pectoris, szívinfarktus miatti mellkasi fájdalom kezelése", "Súlyos hypotenzió, kardiogén sokk, súlyos anémia, túlérzékenység nitrátokra, súlyos hypovolemia, PDE5-gátlókkal (pl. szildenafil) való egyidejű alkalmazás", "Hypotenzió, fejfájás, szédülés, tachycardia, ájulás, kipirulás, hányinger", "PDE5-gátlók (pl. szildenafil – súlyos hypotenzió), alkohol, antihipertenzív szerek (fokozott hypotenzió)", "Gyors hatású, általában perceken belül enyhíti a mellkasi fájdalmat; ha a fájdalom nem enyhül, újabb adag adható, de szoros monitorozás szükséges"], ["NORADRENALIN", "SINORA", "1 mg/1 ml", "0,1-1-10 mikrog/ttkg/perc\n50-es higítás (1 amp.)\nttkg*0,3=0,1 mikrog-os dózis ml/h-ban\nttkg*3=1 mikrog-os dózis ml/h-ban", "(-)", "Akut hypotenzió, szeptikus sokk, kardiogén sokk, anafilaxiás sokk, életveszélyes hypotenzió kezelése", "Hypertonia, ischaemiás szívbetegség, perifériás érszűkület, túlérzékenység noradrenalinra, terhesség alatt csak életmentő helyzetekben alkalmazható\nSzoptatásban nem ajánlott", "Tachycardia, arrhythmia, hypertonia, perifériás érszűkület, ischaemia (pl. bőr, végtagok), szorongás, hányinger, necrosis az infúzió helyén extravasatio esetén", "MAO-gátlók (fokozott vérnyomás-emelkedés), triciklikus antidepresszánsok (fokozott hypertensiv hatás), bétablokkolók (bradycardia fokozódhat), inhalációs érzéstelenítők (arrhythmia kockázata)", "Folyamatos monitorozás szükséges a vérnyomás, szívfrekvencia és perfúzió ellenőrzésére; extravasatio esetén szövetnecrosis alakulhat ki, ilyenkor phentolamin injekció alkalmazása javasolt az érintett területen"], ["ONDENZATRON", "EMETRON", "4 mg/2 ml\n8 mg/4 ml", "4-8 mg egyszeri dózis", "(-)", "Hányinger és hányás kezelése, amelyet kemoterápia, sugárkezelés, vagy műtét utáni állapotok okoznak", "Túlérzékenység ondansetronra vagy más szerotonin receptor antagonistákra (5-HT3 antagonisták)\nSzoptatás alatt nem ajánlott", "Fejfájás, szédülés, QT-intervallum megnyúlása, ritmuszavarok, székrekedés, bőrkiütések", "QT-intervallumot megnyújtó gyógyszerek (pl. antiarrhythmiás szerek), egyéb szerotonerg szerek (pl. SSRI-k – szerotonin szindróma kockázata)", "A QT-intervallum monitorozása szükséges azoknál a betegeknél, akiknél fennáll a szívritmuszavar kockázata"], ["OXYTOCIN", "OXYTOCIN", "5 NE/1 ml", "0,05-0,1 NE/ttkg\n(2,5-10 NE)", "(-)", "Szülésindítás (indukció), méhösszehúzódások serkentése a vajúdás alatt, postpartum vérzés kezelése, abortusz indukciója", "Korai szülés, túlságosan intenzív méhösszehúzódások, mechanikus szülési akadályok, méhszakadásra való hajlam, túlérzékenység oxitocinra", "Méhösszehúzódások túlzott erőssége (hiperstimuláció), méhszakadás, hypotenzió, tachycardia, hányinger, hányás, vízmérgezés nagy dózisok esetén (antidiuretikus hatás)", "Prosztaglandinok (fokozott méhkontrakciók), egyéb méhösszehúzódást serkentő szerek, inhalációs anesztetikumok (csökkentik az oxitocin hatását)", "Szoros monitorozás szükséges a méhaktivitásra, a magzat állapotára, és a vérnyomásra a túlstimuláció és a szövődmények elkerülése érdekében"], ["PANTOPRAZOL", "NOACID", "20 mg/tbl.", "20-40 mg/nap", "12 év alatt nem ajánlott", "Gyomor- és nyombélfekély kezelése, gastroesophagealis reflux betegség (GERD), Zollinger–Ellison-szindróma, gyomorvérzés megelőzése vagy kezelése", "Túlérzékenység pantoprazolra vagy más PPI-ra\nSzoptatás alatt nem ajánlott", "Fejfájás, hasmenés, hányinger, hasi fájdalom, bőrkiütés, ritkán hypomagnesemia és csontritkulás hosszú távú alkalmazás esetén", "Antiretrovirális szerek (pl. atazanavir – csökkent felszívódás), antikoagulánsok (pl. warfarin – fokozott vérzési kockázat), clopidogrel (csökkent hatékonyság), egyéb gyógyszerek, amelyek savas környezetet igényelnek a felszívódáshoz", "Hosszú távú használata esetén a vér magnézium- és kalciumszintjének monitorozása szükséges, különösen idősebb vagy többféle gyógyszert szedő betegek esetében"], ["PANTOPRAZOL", "NOACID", "40 mg por. / 10ml-re", "Alapterápia: 40-80 mg\nFelső GI vérzés, non-varicealis: 80 m(g bolus, utána inf 8 mg/h", "(-)", "Gyomor- és nyombélfekély kezelése, gastroesophagealis reflux betegség (GERD), Zollinger–Ellison-szindróma, gyomorvérzés megelőzése vagy kezelése", "Túlérzékenység pantoprazolra vagy más PPI-ra\nSzoptatás alatt nem ajánlott", "Fejfájás, hasmenés, hányinger, hasi fájdalom, bőrkiütés, ritkán hypomagnesemia és csontritkulás hosszú távú alkalmazás esetén", "Antiretrovirális szerek (pl. atazanavir – csökkent felszívódás), antikoagulánsok (pl. warfarin – fokozott vérzési kockázat), clopidogrel (csökkent hatékonyság), egyéb gyógyszerek, amelyek savas környezetet igényelnek a felszívódáshoz", "Hosszú távú használata esetén a vér magnézium- és kalciumszintjének monitorozása szükséges, különösen idősebb vagy többféle gyógyszert szedő betegek esetében"], ["PARACETAMOL", "MEXALEN", "125-250 mg/kúp", "(-)", "10-15 mg/ttkg 6-8 óránként, max 50 mg/ttkg", "Enyhe és közepesen súlyos fájdalom, lázcsillapítás, posztoperatív fájdalomcsillapítás", "Súlyos májkárosodás, túlérzékenység paracetamolra", "Májkárosodás nagy dózisban vagy hosszú távú alkalmazás esetén, allergiás reakciók, bőrkiütés, ritkán vérképzőszervi zavarok", "Májkárosító szerek (pl. alkohol, egyes antikonvulzívumok – fokozott májkárosodás kockázata), warfarin (fokozott vérzési kockázat hosszan tartó alkalmazás esetén)", "A napi maximális adag nem haladhatja meg a 4 g-ot, a májkárosodás megelőzése érdekében.\nRumack-Matthew nomogram használható mérgezésben."], ["PARACETAMOL", "MEXALEN", "500 mg/tbl.", "10-15 mg/ttkg 6-8 óránként, max 50 mg/ttkg, TOXIKUS DÓZIS: 150mg/ttkg 24 órán belül", "P.O. 20 mg/ttkg", "Enyhe és közepesen súlyos fájdalom, lázcsillapítás, posztoperatív fájdalomcsillapítás", "Súlyos májkárosodás, túlérzékenység paracetamolra", "Májkárosodás nagy dózisban vagy hosszú távú alkalmazás esetén, allergiás reakciók, bőrkiütés, ritkán vérképzőszervi zavarok", "Májkárosító szerek (pl. alkohol, egyes antikonvulzívumok – fokozott májkárosodás kockázata), warfarin (fokozott vérzési kockázat hosszan tartó alkalmazás esetén)", "A napi maximális adag nem haladhatja meg a 4 g-ot, a májkárosodás megelőzése érdekében.\nRumack-Matthew nomogram használható mérgezésben."], ["PARACETAMOL", "PARACETAMOL", "1000 mg/100 ml", "1 g, napi maximum 4 g TOXIKUS DÓZIS: 150mg/ttkg 24 órán belül", "(-)", "Enyhe és közepesen súlyos fájdalom, lázcsillapítás, posztoperatív fájdalomcsillapítás", "Súlyos májkárosodás, túlérzékenység paracetamolra", "Májkárosodás nagy dózisban vagy hosszú távú alkalmazás esetén, allergiás reakciók, bőrkiütés, ritkán vérképzőszervi zavarok", "Májkárosító szerek (pl. alkohol, egyes antikonvulzívumok – fokozott májkárosodás kockázata), warfarin (fokozott vérzési kockázat hosszan tartó alkalmazás esetén)", "A napi maximális adag nem haladhatja meg a 4 g-ot, a májkárosodás megelőzése érdekében.\nRumack-Matthew nomogram használható mérgezésben."], ["PROPOFOL", "PROPOFOL 1%", "200 mg/20 ml", "Anesztézia bevezetése: 1-5 mg/ttkg bólus\nAnesztézia fenntartása: 1-5 mg/ttkg/óra\nttkg*0,1-ttkg*0,5 ml/h-ban", "1-3 mg/ttkg", "Anesztézia indukciója és fenntartása, szedáció intenzív osztályon lévő betegek számára, rövid beavatkozásoknál szedáció (pl. endoszkópia, sebészeti beavatkozások)", "Túlérzékenység propofolra vagy bármely segédanyagra, szója- vagy tojásallergia, súlyos keringési elégtelenség, instabil hemodinamika\nTerhesség, szoptatás alatt nem ajánlott", "Hypotenzió, bradycardia, légzésdepresszió, apnoé, izomrángás, fájdalom az injekció helyén, propofol infúziós szindróma (ritka, de súlyos, nagy dózisban vagy hosszan tartó alkalmazás esetén)", "Egyéb központi idegrendszeri depresszánsok (pl. opioidok, benzodiazepinek – fokozott légzésdepresszió), antihipertenzív szerek (fokozott hipotenzió)", "Szükséges a légzés, vérnyomás és szívfrekvencia szoros monitorozása a kezelés során, különösen nagy dózisú vagy hosszan tartó alkalmazás esetén"], ["POLYSTYRENE SULFONATE", "RESONIUM", "454 g/tégely", "Hyperkalaemia:\n15 g napi 3x", "(-)", "Hyperkalemia kezelése (emelkedett káliumszint csökkentése), különösen vesebetegség vagy veseelégtelenség esetén", "Hipokalémia, ileus vagy súlyos gastrointestinalis motilitási zavarok, obstrukció, túlérzékenység a készítmény összetevőire", "Hipokalémia, gastrointestinalis zavarok (pl. hányinger, hányás, székrekedés, hasmenés), hypokalcemia, ritkán bélnekrózis vagy ileus", "Antacidok és hashajtók (pl. magnézium- vagy alumíniumtartalmú antacidok – bélzavarok kockázata nő), kálium-megtakarító diuretikumok (fokozott hyperkalemia)", "A kezelés során rendszeres elektrolit-monitorozás szükséges, különösen a kálium- és kalciumszintek figyelemmel kísérése érdekében. Fontos a folyadékbevitel fenntartása a székrekedés és egyéb gastrointestinalis mellékhatások megelőzése érdekében."], ["ROCURONIUM", "ESMERONE", "50 mg/5 ml", "0,5 mg/ttkg\n1 mg/ttkg szukcinilkolin helyett", "0,25-0,5 mg/ttkg", "Izomrelaxáció általános anesztézia során, tracheális intubáció megkönnyítése, mechanikus ventilációhoz szükséges izomrelaxáció", "Túlérzékenység rocuroniumra vagy egyéb nem depolarizáló izomrelaxánsokra, súlyos myasthenia gravis, Eaton-Lambert szindróma, korábbi neuromuszkuláris betegségek", "Hypotenzió, tachycardia, anafilaxiás reakciók, izomparalízis, légzésdepresszió, bőrreakciók, hosszan tartó neuromuszkuláris blokád", "Egyéb izomrelaxánsok (fokozott hatás), inhalációs anesztetikumok (pl. izofluran – fokozhatják az izomrelaxációt), antibiotikumok (pl. aminoglikozidok), magnézium-szulfát (fokozott hatás), kortikoszteroidok (hosszan tartó izomgyengeség kockázata)", "Rocuronium hatása gyorsan kialakul, és szükséges a neuromuszkuláris funkció folyamatos monitorozása a megfelelő izomrelaxáció fenntartásához és a hatás megszűnésének biztosításához. Az izomrelaxáns hatás visszafordításához sugammadex használható"], ["SALBUTAMOL", "VENTOLIN", "0,1 mg/exp.", "1-2 puff (100-200 mikrog)\nHyperkalaemia: 10-20 mg nebulizálva (100-200 puff lenne)", "2-4 exp.", "Akut bronchospasmus kezelése asztmában vagy krónikus obstruktív tüdőbetegségben (COPD), asztmás rohamok megelőzése, terhelés okozta bronchospasmus kezelése", "Súlyos szívbetegségek (pl. ischaemiás szívbetegség, hypertrophiás kardiomiopátia), túlérzékenység salbutamolra vagy egyéb béta-2-agonistákra", "Tachycardia, palpitáció, tremor, fejfájás, szédülés, izgatottság, izomgörcsök, ritkán paradox bronchospasmus, hypokalaemia", "Béta-blokkolók (csökkenthetik a salbutamol hatását), MAO-gátlók (fokozott tachycardia), diuretikumok (fokozott hypokalaemia kockázat), egyéb béta-2-agonisták (fokozott mellékhatások)", "Az inhalációs formát előnyben részesítik a gyors hatás és a mellékhatások csökkentése érdekében. Szoros monitorozás szükséges a szívfrekvencia és a káliumszint ellenőrzése érdekében, különösen nagy dózisú vagy hosszan tartó alkalmazás esetén"], ["SZUKCINILKOLIN", "LYSTHENON", "100 mg/5 ml", "2 mg/ttkg, max 200 mg", "2 mg/ttkg", "Rövid hatású izomrelaxáció intubációhoz, anesztézia során izomparalízis indukciója, elektrosokk-terápia során izomgörcsök megelőzése", "Szinapszisok alatti hyperkalaemia (pl. égési sérülés, súlyos trauma, izombetegségek), genetikai hajlam malignus hypertermiára, pszeudo-kolinészteráz enzimhiány, túlérzékenység succinylcholinra", "Hyperkalaemia, malignus hypertermia, izomfájdalmak, bradycardia, hypertonia, izomgörcsök, intrakraniális nyomás növekedése, ritkán anafilaxiás reakciók", "Inhalációs anesztetikumok (fokozott malignus hypertermia kockázat), egyéb izomrelaxánsok, antibiotikumok (aminoglikozidok – fokozott izomrelaxáció), diuretikumok (hyperkalaemia kockázata), magnézium (fokozott hatás)", "A succinylcholine gyors hatású depolarizáló izomrelaxáns, amely intubációhoz és rövid műtéti eljárásokhoz alkalmazható. Fontos a légzés és a szívfrekvencia monitorozása. Malignus hypertermia gyanúja esetén azonnali beavatkozás szükséges, például dantrolen alkalmazása"], ["TRAMADOL", "TRAMADOLOR", "50 mg/tbl.", "50-100 mg 4-6 óránként", "12 év alatt ellenjavalt", "Mérsékelt és súlyos fájdalom kezelése, posztoperatív fájdalom, krónikus fájdalom szindrómák", "Akut alkohol-, drog- vagy gyógyszer-intoxikáció, súlyos légzési elégtelenség, súlyos máj- vagy vesekárosodás, túlérzékenység tramadolra, MAO-gátlók egyidejű használata\nTerhesség, szoptatás alatt nem ajánlott", "Szédülés, álmosság, hányinger, hányás, szájszárazság, székrekedés, fejfájás, légzésdepresszió (nagy dózisban), görcsrohamok (ritkán), allergiás reakciók", "Egyéb központi idegrendszeri depresszánsok (pl. opioidok, nyugtatók – fokozott légzésdepresszió), MAO-gátlók (súlyos interakciók), SSRI-k, SNRI-k (fokozott szerotonin szindróma kockázata)", "Tramadol mérsékelt opioid hatású, ezért kevésbé okoz légzésdepressziót, mint más opioidok, de fokozott óvatosság szükséges nagy dózisban vagy hosszú távú alkalmazás esetén. Görcsrohamok előfordulhatnak, különösen epilepsziás betegeknél vagy gyógyszerinterakciók miatt"], ["TRAMADOL", "CONTRAMAL", "100 mg/2 ml", "50-100 mg 4-6 óránként", "1-2 mg/ttkg, napi max 400 mg", "Mérsékelt és súlyos fájdalom kezelése, posztoperatív fájdalom, krónikus fájdalom szindrómák", "Akut alkohol-, drog- vagy gyógyszer-intoxikáció, súlyos légzési elégtelenség, súlyos máj- vagy vesekárosodás, túlérzékenység tramadolra, MAO-gátlók egyidejű használata\nTerhesség, szoptatás alatt nem ajánlott", "Szédülés, álmosság, hányinger, hányás, szájszárazság, székrekedés, fejfájás, légzésdepresszió (nagy dózisban), görcsrohamok (ritkán), allergiás reakciók", "Egyéb központi idegrendszeri depresszánsok (pl. opioidok, nyugtatók – fokozott légzésdepresszió), MAO-gátlók (súlyos interakciók), SSRI-k, SNRI-k (fokozott szerotonin szindróma kockázata)", "Tramadol mérsékelt opioid hatású, ezért kevésbé okoz légzésdepressziót, mint más opioidok, de fokozott óvatosság szükséges nagy dózisban vagy hosszú távú alkalmazás esetén. Görcsrohamok előfordulhatnak, különösen epilepsziás betegeknél vagy gyógyszerinterakciók miatt"], ["TRANEXÁMSAV", "EXACYL", "500 mg/5 ml", "1 g 10 perc alatt (higítás nélkül 60 ml/h), utána 1g 8 óra alatt (50-re higítva 6,25 ml/h)\nHANO: 1g 10p alatt\nNem traumás SAV: 1 g bólus, utána 1g 6 óránként", "20 mg/ttkg\nHANO: 20 mg/ttkg", "Vérzéscsillapítás trauma, sebészeti beavatkozások (pl. szívműtét, ortopédiai műtét), valamint postpartum vérzés kezelése, hemofília, menorrhagia, orrvérzés, és egyéb vérzékenységek esetén", "Aktív intravaszkuláris trombózis, disszeminált intravaszkuláris koaguláció (DIC) kezelés nélkül, túlérzékenység tranexámsavra, súlyos veseelégtelenség", "Hányinger, hányás, hasmenés, hypotenzió (gyors infúzió esetén), fejfájás, szédülés, allergiás reakciók, thrombosis (ritka)", "Egyéb fibrinolitikus szerek (csökkentik a tranexámsav hatását), egyéb antikoagulánsok vagy trombolitikus szerek (fokozott vérzés kockázata)", "Gyors intravénás infúzió esetén hypotenzió léphet fel, ezért lassú adagolás javasolt"], ["URAPIDIL", "EBRANTIL", "25 mg/5 ml", "5 mg-ként titrálva (OMSZ-nál utána 9-30 mg/h [25ös higításból 9-30 ml/h])", "2 mg/ttkg", "Hipertenzív krízis kezelése, perioperatív hipertónia kezelése, súlyos rezisztens hipertónia akut kezelése", "Súlyos aortaszűkület, terhesség első trimesztere, túlérzékenység urapidilre", "Hypotenzió, szédülés, fejfájás, tachycardia, hányinger, hányás, kipirulás, izzadás, ritkán bradycardia vagy ortosztatikus hipotenzió", "Egyéb vérnyomáscsökkentő szerek (fokozott hypotenzió), PDE5-gátlók (pl. szildenafil – fokozott vérnyomáscsökkenés), alkoholfogyasztás (fokozott hipotenzió)", "Az urapidil gyorsan csökkenti a vérnyomást hipertenzív krízis esetén, ezért folyamatos vérnyomás-monitorozás szükséges a kezelés során. A gyógyszer lassú infúzióban történő beadása javasolt a hirtelen vérnyomásesés és az ortosztatikus hipotenzió elkerülése érdekében"], ["VALPROINSAV", "CONVULEX", "500 mg/5 ml", "40 mg/ttkg 10 perc alatt (max 20 mg/p)\nutána 1 mg/ttkg/h", "(-)", "Epilepszia, különösen generalizált tónusos-klónusos rohamok, absence rohamok, myoclonusos rohamok, bipoláris zavarok mániás epizódjainak kezelése, migrén megelőzése", "Májelégtelenség, májbetegségek, urea-ciklus rendellenességek, terhesség első trimeszterében, ismert mitokondriális betegségek (pl. Alpers-Huttenlocher szindróma), túlérzékenység valproátra\nSzoptatás során ellenjavalt", "Májkárosodás, hasnyálmirigy-gyulladás, thrombocytopenia, súlygyarapodás, szedáció, hányinger, hányás, tremor, hajhullás, hyperammonémia", "Egyéb központi idegrendszeri depresszánsok (fokozott szedáció), antikoagulánsok (fokozott vérzéskockázat), karbamazepin (csökkentheti a valproát szintjét), lamotrigin (fokozhatja a lamotrigin toxikus hatásait), egyéb antiepileptikumok", "A valproát alkalmazása során a májfunkció és a vérkép rendszeres ellenőrzése szükséges, különösen az első hat hónapban"], ["VERAPAMIL", "VERAPAMIL", "5 mg/2 ml\n40 mg/tbl.", "0,075-0,15 mg/ttkg (5-10 mg 2perc alatt)", "0,1-0,5 mg/ttkg", "SVT frekvenciakontrolljára\nPF: \nHa ismert asztma/COPD, jobb, mint BB\nÁltalában jobb frekvenciakontrollra, mint BB", "Súlyos bradycardia, 2. vagy 3. fokú AV-blokk (pacemaker nélkül), kardiogén sokk, HFrEF, hypotenzió, Wolff–Parkinson–White-szindróma, súlyos bal kamrai diszfunkció\nTerhesség, szoptatás alatt nem ajánlott", "Bradycardia, hypotenzió, szédülés, székrekedés, fejfájás, szívelégtelenség súlyosbodása, AV-blokk, bőrkiütés", "Béta-blokkolók (fokozott bradycardia és AV-blokk kockázata), digoxin (fokozott bradycardia), CYP3A4-gátlók (emelhetik a verapamil szintjét), antihipertenzív szerek (fokozott hypotenzió)", "A verapamil alkalmazása során folyamatos EKG-monitorozás szükséges, különösen supraventricularis tachycardia akut kezelésekor. Szoros figyelemmel kell kísérni a vérnyomást és a szívfrekvenciát a hypotenzió és a bradycardia megelőzése érdekében"]];
+const BUILTIN_NAME = "Gyógyszerdózisok beugró (beépített)";
+
+/* ---------- segédek ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("gyd_"+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("gyd_"+k, JSON.stringify(v)); }catch(e){} }
+};
+const rnd = a => a[Math.floor(Math.random()*a.length)];
+const shuffle = a => { a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const num = s => parseFloat(String(s).replace(/\s/g,"").replace(",", "."));
+function fmt(x){
+  if(!isFinite(x)) return "–";
+  const ax = Math.abs(x);
+  const d = ax === 0 ? 0 : ax < 0.1 ? 4 : ax < 1 ? 3 : ax < 10 ? 2 : ax < 100 ? 1 : 0;
+  return x.toLocaleString("hu-HU", {maximumFractionDigits: d, useGrouping: ax >= 10000});
+}
+const empty = v => v == null || /^\s*(\(-\)|-|–|nincs|none)?\s*$/i.test(String(v));
+
+/* ---------- tábla feldolgozás ---------- */
+const NUM = "\\d+(?:[.,]\\d+)?";
+const SEQ = `${NUM}(?:\\s*-\\s*${NUM})*`;
+const UNIT = "(mg|mikrog|µg|mcg|gr|g|NE|ml|mmol)";
+const RE_PERKG = new RegExp(`(${SEQ})\\s*${UNIT}\\s*\\/\\s*(?:tt)?kg((?:\\s*\\/\\s*(?:perc|p|óra|h|nap)\\b)?)`, "gi");
+const RE_MULT = new RegExp(`ttkg\\s*\\*\\s*(${SEQ})`, "gi");
+const RE_DIV = new RegExp(`ttkg\\s*\\/\\s*(${NUM})(?!\\s*(?:${UNIT}|óra|h\\b|perc))`, "gi");
+const RE_MAX = new RegExp(`max\\.?\\s*(\\d{1,3}(?:\\.\\d{3})+|${NUM})\\s*${UNIT}(?!\\s*\\/)`, "i");
+const normUnit = u => { u = u.toLowerCase(); if(u==="µg"||u==="mcg") return "mikrog"; if(u==="gr") return "g"; if(u==="ne") return "NE"; return u; };
+const normPer = p => { p = (p||"").replace(/[\s\/]/g,"").toLowerCase(); if(!p) return ""; if(p==="p"||p==="perc") return "perc"; if(p==="h"||p==="óra") return "óra"; return p; };
+const TO_MG = {mikrog: 0.001, mg: 1, g: 1000};
+
+function parseGrid(grid){
+  grid = grid.map(r => (r||[]).map(c => c==null ? null : String(c)));
+  let h = grid.findIndex(r => r.some(c => c && /hat[óo]anyag/i.test(c)));
+  if(h < 0) throw new Error("Nem találom a HATÓANYAG fejlécet.");
+  const H = grid[h].map(c => (c||"").toLowerCase());
+  const find = re => H.findIndex(c => re.test(c));
+  const col = {
+    name: find(/hat[óo]anyag/), brand: find(/gy[áa]ri/), pack: find(/kiszerel/),
+    adult: find(/d[óo]zis/), ind: find(/^indik/), ki: find(/kontraind/),
+    mh: find(/mell[ée]khat/), kh: find(/k[öo]lcs[öo]nhat/), egyeb: find(/egy[ée]b/)
+  };
+  let start = h + 1, child = -1;
+  const sub = grid[h+1] || [];
+  const ci = sub.findIndex(c => c && /gyermek/i.test(c));
+  if(ci >= 0){ child = ci; const ai = sub.findIndex(c => c && /feln/i.test(c)); if(ai >= 0) col.adult = ai; start = h + 2; }
+  else if(col.adult >= 0) child = col.adult + 1;
+  col.child = child;
+  if(col.name < 0 || col.adult < 0) throw new Error("Hiányzik a HATÓANYAG vagy a DÓZIS oszlop.");
+  const drugs = []; let cur = null;
+  const g = (r, k) => col[k] >= 0 ? r[col[k]] : null;
+  for(let i = start; i < grid.length; i++){
+    const r = grid[i]; if(!r.some(c => !empty(c))) continue;
+    const nm = (g(r,"name")||"").trim().replace(/\s+/g," ");
+    if(nm && (!cur || cur.name !== nm)){ cur = {name: nm, forms: [], ind:[], ki:[], mh:[], kh:[], egyeb:[]}; drugs.push(cur); }
+    if(!cur) continue;
+    const t = v => empty(v) ? "" : String(v).trim();
+    cur.forms.push({brand: t(g(r,"brand")), pack: t(g(r,"pack")), adult: t(g(r,"adult")), child: t(g(r,"child"))});
+    for(const k of ["ind","ki","mh","kh","egyeb"]){ const v = t(g(r,k)); if(v && !cur[k].includes(v)) cur[k].push(v); }
+  }
+  drugs.forEach((d, i) => {
+    d.id = i;
+    d.brands = [...new Set(d.forms.map(f => f.brand).filter(Boolean))];
+    for(const k of ["ind","ki","mh","kh","egyeb"]) d[k] = d[k].join("\n");
+  });
+  return drugs;
+}
+
+function packConc(pack){
+  const line = (pack||"").split("\n")[0];
+  let m = line.match(new RegExp(`(${NUM})\\s*${UNIT}\\s*\\/\\s*(${NUM})?\\s*ml`, "i"));
+  if(m && normUnit(m[2]) !== "ml") return {amt: num(m[1]), unit: normUnit(m[2]), vol: m[3] ? num(m[3]) : 1};
+  m = line.match(new RegExp(`(${NUM})\\s*(mg|mikrog|g|NE)\\b`, "i"));
+  if(m) return {amt: num(m[1]), unit: normUnit(m[2]), vol: null};
+  return null;
+}
+
+function extractEntries(drugs){
+  const out = [], seen = new Set();
+  for(const d of drugs) d.forms.forEach((f, fi) => {
+    for(const [grp, txt] of [["Felnőtt", f.adult], ["Gyermek", f.child]]){
+      if(!txt) continue;
+      let prefix = "";
+      for(let line of txt.split("\n")){
+        line = line.trim(); if(!line) continue;
+        const add = (factor, unit, per, raw) => {
+          if(!(factor > 0)) return;
+          let cap = null; const mx = line.match(RE_MAX);
+          if(mx) cap = {v: num(/^\d{1,3}(\.\d{3})+$/.test(mx[1]) ? mx[1].replace(/\./g,"") : mx[1]), unit: normUnit(mx[2])};
+          const ctx = (prefix && !line.startsWith(prefix) ? prefix + " " : "") + line;
+          const key = [d.id, grp, ctx, raw, factor].join("|");
+          if(seen.has(key)) return; seen.add(key);
+          out.push({drug: d, fi, form: f, grp, ctx, factor, unit, per, raw, cap});
+        };
+        let found = false;
+        for(const m of line.matchAll(RE_PERKG)){
+          found = true;
+          const nums = m[1].split(/\s*-\s*/).map(num);
+          nums.forEach(n => add(n, normUnit(m[2]), normPer(m[3]), m[0]));
+        }
+        const isRate = /ml\/h|perf[úu]zor/i.test(line);
+        for(const m of line.matchAll(RE_MULT)){
+          found = true;
+          m[1].split(/\s*-\s*/).map(num).forEach(n => add(n, isRate ? "ml/h" : (/ml/i.test(line) ? "ml" : ""), "", m[0]));
+        }
+        for(const m of line.matchAll(RE_DIV)){
+          found = true; const n = num(m[1]); if(n > 0) add(1/n, isRate ? "ml/h" : (/ml/i.test(line) ? "ml" : ""), "", m[0]);
+        }
+        if(/:\s*$/.test(line) && !found) prefix = line.replace(/:\s*$/, ":");
+      }
+    }
+  });
+  return out;
+}
+
+/* ---------- állapot ---------- */
+let DRUGS = [], ENTRIES = [], SRC = null;
+let selected = new Set();
+const score = store.get("score", {ok:0, all:0});
+
+function loadData(grid, name, persist){
+  const drugs = parseGrid(grid);
+  if(drugs.length < 3) throw new Error("Túl kevés gyógyszert találtam a táblában ("+drugs.length+").");
+  DRUGS = drugs; ENTRIES = extractEntries(drugs); SRC = name;
+  const saved = store.get("sel:"+name, null);
+  selected = new Set(saved ? DRUGS.filter(d => saved.includes(d.name)).map(d => d.id) : DRUGS.map(d => d.id));
+  if(persist){ store.set("grid", grid); store.set("gridName", name); }
+}
+function saveSel(){ store.set("sel:"+SRC, DRUGS.filter(d => selected.has(d.id)).map(d => d.name)); }
+const activeDrugs = () => DRUGS.filter(d => selected.has(d.id));
+const activeEntries = () => ENTRIES.filter(e => selected.has(e.drug.id));
+
+function renderScore(){ $("#score").textContent = score.all ? `${score.ok}/${score.all} helyes · ${Math.round(100*score.ok/score.all)}%` : "Még nincs válasz"; }
+function addScore(ok){ score.all++; if(ok) score.ok++; store.set("score", score); renderScore(); }
+
+/* ---------- fülek ---------- */
+function showTab(t){
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
+  document.querySelectorAll(".panel").forEach(p => p.hidden = p.dataset.panel !== t);
+  store.set("tab", t);
+  if(t === "tabla") renderTable();
+}
+$("#tabs").addEventListener("click", e => { const b = e.target.closest("button"); if(b) showTab(b.dataset.tab); });
+
+/* ---------- KVÍZ ---------- */
+const QTYPES = [
+  {k:"ind", label:"Indikáció", on:true}, {k:"ki", label:"Kontraindikáció", on:true},
+  {k:"mh", label:"Mellékhatás", on:true}, {k:"kh", label:"Kölcsönhatás", on:false},
+  {k:"dA", label:"Felnőtt dózis", on:true}, {k:"dC", label:"Gyermek dózis", on:true},
+  {k:"brand", label:"Gyári név", on:true}, {k:"pack", label:"Kiszerelés", on:false},
+  {k:"egyeb", label:"Egyéb megjegyzés", on:false}
+];
+const qOn = store.get("qtypes", Object.fromEntries(QTYPES.map(q => [q.k, q.on])));
+let quizMode = store.get("quizMode", "mc");
+const wrongs = [];
+const FIELD_NAME = {ind:"indikációja", ki:"kontraindikációja", mh:"mellékhatása", kh:"kölcsönhatása (mivel adni figyelmet igényel)", egyeb:"megjegyzése", brand:"gyári neve", pack:"kiszerelése", dA:"felnőtt dózisa", dC:"gyermek dózisa"};
+const FIELD_LABEL = {ind:"Indikáció", ki:"Kontraindikáció", mh:"Mellékhatás", kh:"Kölcsönhatás", brand:"Gyári név"};
+
+function renderQtypes(){
+  $("#qtypes").innerHTML = QTYPES.map(q => `<button class="chip" data-k="${q.k}" aria-pressed="${!!qOn[q.k]}">${q.label}</button>`).join("");
+}
+$("#qtypes").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  qOn[b.dataset.k] = !qOn[b.dataset.k];
+  if(!Object.values(qOn).some(Boolean)) qOn[b.dataset.k] = true;
+  store.set("qtypes", qOn); renderQtypes(); nextQuestion();
+});
+function setMode(m){ quizMode = m; store.set("quizMode", m); $("#modeMc").setAttribute("aria-pressed", m==="mc"); $("#modeCard").setAttribute("aria-pressed", m==="card"); nextQuestion(); }
+$("#modeMc").onclick = () => setMode("mc"); $("#modeCard").onclick = () => setMode("card");
+
+function buildQuestion(){
+  const pool = activeDrugs(); const all = DRUGS;
+  const types = QTYPES.map(q => q.k).filter(k => qOn[k]);
+  for(let tries = 0; tries < 60; tries++){
+    const k = rnd(types);
+    if(k === "dA" || k === "dC" || k === "pack"){
+      const fld = k === "dA" ? "adult" : k === "dC" ? "child" : "pack";
+      const items = pool.flatMap(d => d.forms.map(f => ({d, f}))).filter(x => x.f[fld]);
+      if(!items.length) continue;
+      const it = rnd(items);
+      const right = it.f[fld];
+      const others = shuffle([...new Set(all.flatMap(d => d === it.d ? [] : d.forms.map(f => f[fld])).filter(v => v && v !== right))]).slice(0, 3);
+      if(others.length < 2) continue;
+      const formTxt = k === "pack" ? (it.f.brand || "") : [it.f.brand, it.f.pack].filter(Boolean).join(" · ");
+      return {k, drugTitle: it.d.name, sub: formTxt, ask: `Mi a ${FIELD_NAME[k]}?`, right, opts: shuffle([right, ...others]), d: it.d};
+    }
+    const fld = k;
+    const getv = d => fld === "brand" ? d.brands.join(", ") : d[fld];
+    const cand = pool.filter(d => getv(d));
+    if(!cand.length) continue;
+    const d = rnd(cand);
+    const reverse = Math.random() < 0.45;
+    if(!reverse){
+      const right = getv(d);
+      const others = shuffle([...new Set(all.filter(x => x !== d).map(getv).filter(v => v && v !== right))]).slice(0, 3);
+      if(others.length < 2) continue;
+      return {k, drugTitle: d.name, sub: "", ask: `Mi a ${FIELD_NAME[k]}?`, right, opts: shuffle([right, ...others]), d};
+    } else {
+      const val = getv(d);
+      const right = d.name;
+      const others = shuffle(all.filter(x => x !== d && getv(x) !== val).map(x => x.name)).slice(0, 3);
+      if(others.length < 2) continue;
+      return {k, drugTitle: "", sub: "", ask: `Melyik hatóanyag?\n${FIELD_LABEL[k]}: ${val}`, right, opts: shuffle([right, ...others]), d, reverse: true};
+    }
+  }
+  return null;
+}
+
+function nextQuestion(){
+  const c = $("#quizCard");
+  const q = buildQuestion();
+  if(!q){ c.innerHTML = `<p class="lead">Nincs elég adat a kiválasztott kérdéstípusokhoz. Jelölj ki több gyógyszert vagy kérdéstípust.</p>`; return; }
+  const head = `<div class="eyebrow">${esc(QTYPES.find(t => t.k === q.k).label)}${q.reverse ? " · fordítva" : ""}</div>
+    <p class="q">${q.drugTitle ? `<span class="drug">${esc(q.drugTitle)}</span>` : ""}${q.sub ? `<span class="note">${esc(q.sub)}</span>\n` : ""}${esc(q.ask)}</p>`;
+  if(quizMode === "mc"){
+    c.innerHTML = head + `<div class="opts">${q.opts.map((o, i) => `<button class="opt" data-i="${i}">${esc(o)}</button>`).join("")}</div><div id="qFoot"></div>`;
+    c.querySelectorAll(".opt").forEach(b => b.onclick = () => {
+      const ok = q.opts[+b.dataset.i] === q.right;
+      c.querySelectorAll(".opt").forEach(x => { x.disabled = true; if(q.opts[+x.dataset.i] === q.right) x.classList.add("right"); });
+      if(!ok){ b.classList.add("wrong"); logWrong(q); }
+      addScore(ok);
+      $("#qFoot").innerHTML = `<div class="row" style="justify-content:space-between"><span class="verdict ${ok ? "ok" : "no"}">${ok ? "Helyes." : "Nem ez. A helyes válasz zölddel jelölve."}</span><button class="btn" id="qNext">Következő</button></div>`;
+      $("#qNext").onclick = nextQuestion; $("#qNext").focus();
+    });
+  } else {
+    c.innerHTML = head + `<div id="qFoot"><button class="btn" id="qShow">Mutasd a választ</button></div>`;
+    $("#qShow").onclick = () => {
+      $("#qFoot").innerHTML = `<div class="answer">${esc(q.right)}</div>
+        <div class="row" style="margin-top:12px"><button class="btn" id="qYes">Tudtam</button><button class="btn ghost" id="qNo">Nem tudtam</button></div>`;
+      $("#qYes").onclick = () => { addScore(true); nextQuestion(); };
+      $("#qNo").onclick = () => { addScore(false); logWrong(q); nextQuestion(); };
+    };
+  }
+}
+function logWrong(q){
+  wrongs.unshift(`${q.drugTitle || ""}${q.drugTitle ? " – " : ""}${q.ask}\n→ ${q.right}`);
+  wrongs.length = Math.min(wrongs.length, 25);
+  $("#wrongBox").hidden = false;
+  $("#wrongList").innerHTML = wrongs.map(w => `<div>${esc(w)}</div>`).join("");
+}
+
+/* ---------- SZORZÁS ---------- */
+let mxGroup = store.get("mxGroup", "all"), mxHint = store.get("mxHint", false);
+const W_AD = [50,60,70,80,90,100,110,120], W_CH = [3,4,5,6,8,10,12,15,20,25,30,35,40];
+function setMx(){ $("#mxAll").setAttribute("aria-pressed", mxGroup==="all"); $("#mxAd").setAttribute("aria-pressed", mxGroup==="ad"); $("#mxCh").setAttribute("aria-pressed", mxGroup==="ch"); $("#mxHint").setAttribute("aria-pressed", mxHint); }
+$("#mxAll").onclick = () => { mxGroup="all"; store.set("mxGroup",mxGroup); setMx(); nextMath(); };
+$("#mxAd").onclick = () => { mxGroup="ad"; store.set("mxGroup",mxGroup); setMx(); nextMath(); };
+$("#mxCh").onclick = () => { mxGroup="ch"; store.set("mxGroup",mxGroup); setMx(); nextMath(); };
+$("#mxHint").onclick = () => { mxHint=!mxHint; store.set("mxHint",mxHint); setMx(); nextMath(); };
+
+const unitLabel = e => e.unit === "ml/h" ? "ml/h" : (e.unit ? e.unit : "") + (e.per ? "/" + e.per : "");
+function entryText(e){ return e.unit === "ml/h" || e.unit === "" || e.raw.startsWith("ttkg") ? e.raw : e.raw; }
+
+function nextMath(){
+  const c = $("#mathCard");
+  const pool = activeEntries().filter(e => mxGroup==="all" || (mxGroup==="ad" ? e.grp==="Felnőtt" : e.grp==="Gyermek"));
+  if(!pool.length){ c.innerHTML = `<p class="lead">A kiválasztott gyógyszereknél nincs kg-alapú adag.</p>`; return; }
+  const e = rnd(pool);
+  const w = rnd(e.grp === "Gyermek" ? W_CH : W_AD);
+  const res = e.factor * w;
+  c.innerHTML = `<div class="eyebrow">Feladat</div>
+    <div class="task">${fmt(e.factor)} × ${w}${mxHint ? `<small>${esc(e.drug.name)} (${e.grp.toLowerCase()}) · ${esc(e.raw)} · ${w} kg</small>` : ""}</div>
+    <form class="ansrow" id="mxForm"><input id="mxIn" inputmode="decimal" autocomplete="off" placeholder="válasz" aria-label="Válasz"><button class="btn">Ellenőrzés</button></form>
+    <div id="mxFoot"></div>`;
+  const inp = $("#mxIn"); inp.focus({preventScroll:true});
+  $("#mxForm").onsubmit = ev => {
+    ev.preventDefault();
+    const a = num(inp.value); if(!isFinite(a)) { inp.focus(); return; }
+    const ok = Math.abs(a - res) <= Math.max(0.005, Math.abs(res) * 0.01);
+    addScore(ok); inp.disabled = true; $("#mxForm button").disabled = true;
+    const uses = ENTRIES.filter(x => Math.abs(x.factor - e.factor) < 1e-9);
+    const shown = uses.filter(x => x.grp === e.grp).concat(uses.filter(x => x.grp !== e.grp));
+    $("#mxFoot").innerHTML = `<p class="verdict ${ok ? "ok" : "no"}">${ok ? "Helyes" : "Nem jó"}: ${fmt(e.factor)} × ${w} = ${fmt(res)}</p>
+      <div class="eyebrow">Ez a számolás ezeknél hasznos (${shown.length})</div>
+      <ul class="uses">${shown.map(x => useItem(x, x.grp === e.grp ? w : null)).join("")}</ul>
+      <div class="row"><button class="btn" id="mxNext">Következő</button></div>`;
+    $("#mxNext").onclick = nextMath; $("#mxNext").focus();
+  };
+}
+function useItem(x, w){
+  let res = "";
+  if(w != null){
+    const r = x.factor * w;
+    res = `${w} kg → <span class="res">${fmt(r)} ${esc(unitLabel(x))}</span>`;
+    if(x.cap && !x.per && x.unit === x.cap.unit && r > x.cap.v) res += ` <span class="warn">max ${fmt(x.cap.v)} ${esc(x.cap.unit)}!</span>`;
+    const pc = packConc(x.form.pack);
+    if(pc && pc.vol && !x.per && TO_MG[x.unit] && TO_MG[pc.unit]){
+      const ml = r * TO_MG[x.unit] / (pc.amt * TO_MG[pc.unit] / pc.vol);
+      res += ` <span class="note">(= ${fmt(ml)} ml hígítatlan ampullából)</span>`;
+    } else if(pc && pc.vol && !x.per && x.unit === "NE" && pc.unit === "NE"){
+      res += ` <span class="note">(= ${fmt(r / (pc.amt / pc.vol))} ml hígítatlanul)</span>`;
+    }
+  }
+  return `<li><b>${esc(x.drug.name)}</b><span class="tag">${x.grp}</span>${x.form.pack ? ` <span class="note">${esc(x.form.pack.split("\n")[0])}</span>` : ""}
+    <div class="ctx">${esc(x.ctx)}</div>${res ? `<div>${res}</div>` : ""}</li>`;
+}
+
+/* ---------- PERFÚZOR ---------- */
+function perfEntries(){
+  return activeEntries().filter(e => (e.per === "perc" || e.per === "óra") && ["mg","mikrog","NE","g"].includes(e.unit));
+}
+function dilutionFor(e, pc){
+  const txt = e.ctx + "\n" + (e.grp === "Felnőtt" ? e.form.adult : e.form.child);
+  const m1 = txt.match(new RegExp(`(${NUM})\\s*${UNIT}\\s*\\/\\s*(\\d+)\\s*ml[^\\n]{0,25}hig`, "i"));
+  if(m1 && normUnit(m1[2]) !== "ml"){ const v = +m1[3]; if(v >= 5 && v <= 100) return {amt: num(m1[1]), unit: normUnit(m1[2]), vol: v}; }
+  const re = /(\d+)\s*(?:ml)?\s*-?\s*(?:es|as|ös|ra|re)\s*hig[ií]t/gi;
+  const amtTxt = String(pc.amt).replace(".", ",");
+  let best = null;
+  for(const m of txt.matchAll(re)){
+    const v = +m[1]; if(v < 10 || v > 100) continue;
+    if(!best) best = v;
+    if(txt.slice(Math.max(0, m.index - 30), m.index).includes(amtTxt)){ best = v; break; }
+  }
+  if(!best && pc.vol && pc.vol >= 20 && pc.vol <= 50) return {amt: pc.amt, unit: pc.unit, vol: pc.vol, undiluted: true};
+  return {amt: pc.amt, unit: pc.unit, vol: best || 50};
+}
+function perfCalc(dose, unit, per, perKg, w, amt, amtU, vol){
+  const conv = {mikrog:0.001, mg:1, g:1000};
+  let doseH = dose * (perKg ? w : 1) * (per === "perc" ? 60 : 1);
+  let c = amt / vol;
+  if(unit === "NE" || amtU === "NE"){ if(unit !== amtU) return null; }
+  else { doseH = doseH * conv[unit]; c = c * conv[amtU]; }
+  return {rate: doseH / c, doseH, c};
+}
+function nextPerf(){
+  const c = $("#perfCard");
+  const pool = perfEntries();
+  if(!pool.length){ c.innerHTML = `<p class="lead">A kiválasztott gyógyszereknél nincs időegységes (…/perc, …/óra) adag.</p>`; return; }
+  for(let t = 0; t < 30; t++){
+    const e = rnd(pool);
+    const pc = packConc(e.form.pack);
+    if(!pc) continue;
+    const w = rnd(e.grp === "Gyermek" ? W_CH : W_AD);
+    const dl = dilutionFor(e, pc);
+    const vol = dl.vol, amt = dl.amt; pc.unit = dl.unit;
+    const r = perfCalc(e.factor, e.unit, e.per, true, w, amt, pc.unit, vol);
+    if(!r || !(r.rate > 0) || r.rate > 500) continue;
+    const k = r.rate / w;
+    const cu = pc.unit === "NE" ? "NE" : (e.unit === "mikrog" ? "mikrog" : "mg");
+    const cDisp = pc.unit === "NE" ? amt / vol : (amt * TO_MG[pc.unit] / vol) / TO_MG[cu];
+    c.innerHTML = `<div class="eyebrow">Perfúzor feladat · ${esc(e.grp)}</div>
+      <p class="q"><span class="drug">${esc(e.drug.name)}</span>${fmt(e.factor)} ${esc(e.unit)}/ttkg/${esc(e.per)} · ${w} kg
+${dl.undiluted ? `Hígítatlanul (${fmt(amt)} ${esc(pc.unit)} / ${vol} ml).` : `${fmt(amt)} ${esc(pc.unit)} ${vol} ml-re hígítva.`} Hány ml/h?</p>
+      <form class="ansrow" id="pfForm"><input id="pfIn" inputmode="decimal" autocomplete="off" placeholder="ml/h" aria-label="Válasz ml/h-ban"><button class="btn">Ellenőrzés</button></form>
+      <div id="pfFoot"></div>`;
+    $("#pfForm").onsubmit = ev => {
+      ev.preventDefault();
+      const a = num($("#pfIn").value); if(!isFinite(a)) return;
+      const ok = Math.abs(a - r.rate) <= Math.max(0.05, r.rate * 0.02);
+      addScore(ok); $("#pfIn").disabled = true; $("#pfForm button").disabled = true;
+      const rules = ENTRIES.filter(x => x.drug === e.drug && x.unit === "ml/h");
+      $("#pfFoot").innerHTML = `<p class="verdict ${ok ? "ok" : "no"}">${ok ? "Helyes" : "Nem jó"}: ${fmt(r.rate)} ml/h</p>
+        <div class="steps">Koncentráció: ${fmt(amt)} ${pc.unit} / ${vol} ml = ${fmt(cDisp)} ${cu}/ml
+Óránkénti adag: ${fmt(e.factor)} × ${w} kg${e.per === "perc" ? " × 60 perc" : ""} = ${fmt(e.factor * w * (e.per === "perc" ? 60 : 1))} ${e.unit}/óra
+Sebesség: ${fmt(e.factor * w * (e.per === "perc" ? 60 : 1))} ÷ ${fmt(e.unit === cu || pc.unit === "NE" ? cDisp : cDisp * TO_MG[cu] / TO_MG[e.unit])} = ${fmt(r.rate)} ml/h
+Gyorsszabály ennél a hígításnál: ttkg × ${fmt(k)} = ml/h</div>
+        ${rules.length ? `<div class="eyebrow">A táblád ml/h szabályai ennél a gyógyszernél</div><ul class="uses">${rules.map(x => useItem(x, w)).join("")}</ul>` : ""}
+        <div class="row"><button class="btn" id="pfNext">Következő</button></div>`;
+      $("#pfNext").onclick = nextPerf; $("#pfNext").focus();
+    };
+    return;
+  }
+  c.innerHTML = `<p class="lead">Nem sikerült feladatot összeállítani a kiválasztott gyógyszerekből.</p>`;
+}
+function calcPerf(){
+  const [unit, kg, per] = $("#pcUnit").value.split("|");
+  const dose = num($("#pcDose").value), w = num($("#pcW").value), amt = num($("#pcAmt").value), vol = num($("#pcVol").value), amtU = $("#pcAmtU").value;
+  const perKg = kg === "kg";
+  if(![dose, amt, vol].every(isFinite) || (perKg && !isFinite(w)) || amt <= 0 || vol <= 0){ $("#pcOut").textContent = "–"; $("#pcSteps").textContent = "Adj meg minden mezőt."; return; }
+  const r = perfCalc(dose, unit, per, perKg, w, amt, amtU, vol);
+  if(!r){ $("#pcOut").textContent = "–"; $("#pcSteps").textContent = "Az NE alapú adaghoz a fecskendő tartalma is NE legyen."; return; }
+  $("#pcOut").textContent = fmt(r.rate) + " ml/h";
+  const conc = amt / vol;
+  $("#pcSteps").textContent = `Koncentráció: ${fmt(amt)} ${amtU} / ${fmt(vol)} ml = ${fmt(conc)} ${amtU}/ml\nÓránkénti adag: ${fmt(dose)}${perKg ? " × " + fmt(w) + " kg" : ""}${per === "perc" ? " × 60" : ""} = ${fmt(dose * (perKg ? w : 1) * (per === "perc" ? 60 : 1))} ${unit}/óra` + (perKg ? `\nGyorsszabály: ttkg × ${fmt(r.rate / w)} = ml/h` : "");
+}
+["#pcDose","#pcUnit","#pcW","#pcAmt","#pcAmtU","#pcVol"].forEach(s => $(s).addEventListener("input", calcPerf));
+
+/* ---------- TÁBLÁZAT ---------- */
+function renderTableSelect(){
+  const prev = store.get("tbDrug", null);
+  const withE = DRUGS.filter(d => ENTRIES.some(e => e.drug === d));
+  $("#tbDrug").innerHTML = withE.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
+  const p = withE.find(d => d.name === prev); if(p) $("#tbDrug").value = p.id;
+}
+$("#tbDrug").addEventListener("change", () => { const d = DRUGS[+$("#tbDrug").value]; if(d) store.set("tbDrug", d.name); renderTable(); });
+function renderTable(){
+  const d = DRUGS[+$("#tbDrug").value]; const out = $("#tbOut");
+  if(!d){ out.innerHTML = ""; return; }
+  const ents = ENTRIES.filter(e => e.drug === d);
+  const html = [];
+  for(const grp of ["Felnőtt","Gyermek"]){
+    const es = ents.filter(e => e.grp === grp); if(!es.length) continue;
+    // azonos sorból származó tartományok összevonása
+    const rows = []; for(const e of es){ const last = rows[rows.length-1]; if(last && last.raw === e.raw && last.ctx === e.ctx && last.fi === e.fi){ last.f.push(e.factor); } else rows.push({...e, f:[e.factor]}); }
+    const W = grp === "Gyermek" ? W_CH : W_AD;
+    html.push(`<div><div class="eyebrow" style="margin-bottom:6px">${grp}</div><div class="tblwrap"><table><thead><tr><th class="l">Adag</th>${W.map(w => `<th>${w} kg</th>`).join("")}</tr></thead><tbody>${
+      rows.map(r => `<tr><td class="l">${esc(r.raw)} <small>${esc(r.ctx)}</small></td>${W.map(w => {
+        const vals = r.f.map(f => f * w);
+        const over = r.cap && !r.per && r.unit === r.cap.unit && Math.max(...vals) > r.cap.v;
+        return `<td class="num"${over ? ` style="color:var(--bad)" title="max ${fmt(r.cap.v)} ${esc(r.cap.unit)}"` : ""}>${vals.map(fmt).join("–")}</td>`;
+      }).join("")}</tr>`).join("")
+    }</tbody></table></div><p class="note">Egység: a sor elején szereplő egység × kg (ttkg × szorzó soroknál ml/h vagy ml). Piros: a sorban megadott maximum fölött.</p></div>`);
+  }
+  out.innerHTML = html.join("") || `<p class="lead">Ennél a gyógyszernél nincs kg-alapú adag a táblában.</p>`;
+}
+
+/* ---------- BEÁLLÍTÁS ---------- */
+function renderChips(){
+  $("#drugChips").innerHTML = DRUGS.map(d => `<button class="chip" data-id="${d.id}" aria-pressed="${selected.has(d.id)}">${esc(d.name)}</button>`).join("");
+  $("#selCount").textContent = `${selected.size} / ${DRUGS.length}`;
+}
+$("#drugChips").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  const id = +b.dataset.id; selected.has(id) ? selected.delete(id) : selected.add(id);
+  saveSel(); renderChips(); refreshAll(false);
+});
+$("#selAll").onclick = () => { selected = new Set(DRUGS.map(d => d.id)); saveSel(); renderChips(); refreshAll(false); };
+$("#selNone").onclick = () => { selected = new Set(); saveSel(); renderChips(); refreshAll(false); };
+function renderSrc(){
+  $("#srcInfo").innerHTML = `<b>${esc(SRC)}</b><br><span class="note">${DRUGS.length} hatóanyag, ${DRUGS.reduce((a, d) => a + d.forms.length, 0)} kiszerelés, ${ENTRIES.length} kg-alapú adag felismerve</span>`;
+}
+function msg(t, err){ $("#srcMsg").innerHTML = t ? `<div class="toast${err ? " err" : ""}">${esc(t)}</div>` : ""; }
+
+let xlsxLoading = null;
+function loadXLSX(){
+  if(window.XLSX) return Promise.resolve();
+  if(xlsxLoading) return xlsxLoading;
+  xlsxLoading = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload = () => res(); s.onerror = () => { xlsxLoading = null; rej(new Error("Az Excel-olvasó nem töltődött be. Van internet?")); };
+    document.head.appendChild(s);
+  });
+  return xlsxLoading;
+}
+$("#xlsIn").addEventListener("change", async ev => {
+  const file = ev.target.files[0]; ev.target.value = ""; if(!file) return;
+  msg("Betöltés…");
+  try{
+    await loadXLSX();
+    const wb = XLSX.read(await file.arrayBuffer(), {type: "array"});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const grid = XLSX.utils.sheet_to_json(ws, {header: 1, defval: null, raw: false, blankrows: true});
+    for(const m of (ws["!merges"] || [])){
+      const v = (grid[m.s.r] || [])[m.s.c];
+      for(let r = m.s.r; r <= m.e.r; r++){ grid[r] = grid[r] || []; for(let c = m.s.c; c <= m.e.c; c++) grid[r][c] = v; }
+    }
+    const name = file.name + " · " + new Date().toLocaleDateString("hu-HU");
+    loadData(grid, name, true);
+    msg(`Betöltve: ${DRUGS.length} hatóanyag.`);
+    refreshAll(true);
+  }catch(e){ msg(e.message || "Nem sikerült beolvasni a fájlt.", true); }
+});
+$("#resetSrc").onclick = () => {
+  try{ localStorage.removeItem("gyd_grid"); localStorage.removeItem("gyd_gridName"); }catch(e){}
+  loadData(BUILTIN_GRID, BUILTIN_NAME, false); msg("Visszaállítva a beépített táblára."); refreshAll(true);
+};
+
+function refreshAll(full){
+  if(full){ renderChips(); renderSrc(); renderTableSelect(); }
+  nextQuestion(); nextMath(); nextPerf();
+  if(!$("[data-panel=tabla]").hidden) renderTable();
+}
+
+/* ---------- indulás ---------- */
+(function init(){
+  const g = store.get("grid", null), n = store.get("gridName", null);
+  try{ if(g && n) loadData(g, n, false); else loadData(BUILTIN_GRID, BUILTIN_NAME, false); }
+  catch(e){ loadData(BUILTIN_GRID, BUILTIN_NAME, false); }
+  renderQtypes(); setMx(); renderScore(); calcPerf();
+  $("#modeMc").setAttribute("aria-pressed", quizMode==="mc"); $("#modeCard").setAttribute("aria-pressed", quizMode==="card");
+  refreshAll(true);
+  showTab(store.get("tab", "kviz"));
+})();
+</script>
+
+<script>if("serviceWorker" in navigator && location.protocol==="https:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}</script>
+</body></html>
