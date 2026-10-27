@@ -186,10 +186,11 @@ td.num{font-family:var(--f-mono);font-weight:500}
     <div class="row">
       <label class="btn" for="xlsIn" style="display:inline-block">Excel betöltése</label>
       <input type="file" id="xlsIn" accept=".xlsx,.xls,.xlsm" hidden>
-      <button class="btn ghost" id="resetSrc">Beépített tábla visszaállítása</button>
+      <button class="btn ghost" id="resetSrc">Közös tábla visszaállítása</button>
     </div>
     <div id="srcMsg"></div>
-    <p class="note">Az Excel szerkezete maradjon olyan, mint most: fejléc a HATÓANYAG, GYÁRI NÉV, KISZERELÉS, DÓZIS (FELNŐTT / GYERMEK), INDIKÁCIÓ, KONTRAINDIKÁCIÓ, MELLÉKHATÁS, KÖLCSÖNHATÁS, EGYÉB oszlopokkal. Új sor, új gyógyszer, módosított adag mehet bátran. A betöltött tábla ezen az eszközön megmarad. Az első betöltéshez internet kell.</p>
+    <p class="note">Az Excel szerkezete maradjon olyan, mint most: fejléc a HATÓANYAG, GYÁRI NÉV, KISZERELÉS, DÓZIS (FELNŐTT / GYERMEK), INDIKÁCIÓ, KONTRAINDIKÁCIÓ, MELLÉKHATÁS, KÖLCSÖNHATÁS, EGYÉB oszlopokkal. Új sor, új gyógyszer, módosított adag mehet bátran.</p>
+    <p class="note"><b>Közös tábla:</b> az app minden indításkor megnézi a weboldal mellett lévő <code>adatok.xlsx</code> fájlt, és ha változott, mindenkinél frissül. Net nélkül az utoljára letöltött változat marad.<br><b>Saját betöltés:</b> az „Excel betöltése” gombbal betöltött tábla csak ezen az eszközön érvényes, és felülírja a közöset, amíg vissza nem állítod.</p>
   </div>
   <div class="card">
     <div class="row" style="justify-content:space-between"><div class="eyebrow">Gyakorolt gyógyszerek (<span id="selCount"></span>)</div>
@@ -639,18 +640,44 @@ function loadXLSX(){
   });
   return xlsxLoading;
 }
+function xlsxToGrid(buf){
+  const wb = XLSX.read(buf, {type: "array"});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const grid = XLSX.utils.sheet_to_json(ws, {header: 1, defval: null, raw: false, blankrows: true});
+  for(const m of (ws["!merges"] || [])){
+    const v = (grid[m.s.r] || [])[m.s.c];
+    for(let r = m.s.r; r <= m.e.r; r++){ grid[r] = grid[r] || []; for(let c = m.s.c; c <= m.e.c; c++) grid[r][c] = v; }
+  }
+  return grid.map(r => (r || []).map(c => c == null ? null : String(c)));
+}
+const sharedSource = () => {
+  const g = store.get("remoteGrid", null), n = store.get("remoteName", null);
+  return g && n ? [g, n] : [BUILTIN_GRID, BUILTIN_NAME];
+};
+async function checkRemote(){
+  try{
+    const res = await fetch("adatok.xlsx", {cache: "no-cache"});
+    if(!res.ok) return;
+    const buf = await res.arrayBuffer();
+    await loadXLSX();
+    const grid = xlsxToGrid(buf);
+    parseGrid(grid); // ellenőrzés: hibás tábla esetén kivételt dob
+    const changed = JSON.stringify(grid) !== JSON.stringify(store.get("remoteGrid", null));
+    const lm = res.headers.get("last-modified");
+    const name = "Közös tábla (adatok.xlsx" + (lm ? ", " + new Date(lm).toLocaleDateString("hu-HU") : "") + ")";
+    store.set("remoteGrid", grid); store.set("remoteName", name);
+    if(changed && !store.get("grid", null)){
+      loadData(grid, name, false); refreshAll(true);
+      msg("A közös tábla frissült: " + DRUGS.length + " hatóanyag.");
+    }
+  }catch(e){ /* nincs net vagy nincs adatok.xlsx: marad a meglévő tábla */ }
+}
 $("#xlsIn").addEventListener("change", async ev => {
   const file = ev.target.files[0]; ev.target.value = ""; if(!file) return;
   msg("Betöltés…");
   try{
     await loadXLSX();
-    const wb = XLSX.read(await file.arrayBuffer(), {type: "array"});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const grid = XLSX.utils.sheet_to_json(ws, {header: 1, defval: null, raw: false, blankrows: true});
-    for(const m of (ws["!merges"] || [])){
-      const v = (grid[m.s.r] || [])[m.s.c];
-      for(let r = m.s.r; r <= m.e.r; r++){ grid[r] = grid[r] || []; for(let c = m.s.c; c <= m.e.c; c++) grid[r][c] = v; }
-    }
+    const grid = xlsxToGrid(await file.arrayBuffer());
     const name = file.name + " · " + new Date().toLocaleDateString("hu-HU");
     loadData(grid, name, true);
     msg(`Betöltve: ${DRUGS.length} hatóanyag.`);
@@ -659,7 +686,8 @@ $("#xlsIn").addEventListener("change", async ev => {
 });
 $("#resetSrc").onclick = () => {
   try{ localStorage.removeItem("gyd_grid"); localStorage.removeItem("gyd_gridName"); }catch(e){}
-  loadData(BUILTIN_GRID, BUILTIN_NAME, false); msg("Visszaállítva a beépített táblára."); refreshAll(true);
+  const [g, n] = sharedSource();
+  loadData(g, n, false); msg("Visszaállítva a közös táblára."); refreshAll(true); checkRemote();
 };
 
 function refreshAll(full){
@@ -671,12 +699,13 @@ function refreshAll(full){
 /* ---------- indulás ---------- */
 (function init(){
   const g = store.get("grid", null), n = store.get("gridName", null);
-  try{ if(g && n) loadData(g, n, false); else loadData(BUILTIN_GRID, BUILTIN_NAME, false); }
+  try{ if(g && n) loadData(g, n, false); else loadData(...sharedSource(), false); }
   catch(e){ loadData(BUILTIN_GRID, BUILTIN_NAME, false); }
   renderQtypes(); setMx(); renderScore(); calcPerf();
   $("#modeMc").setAttribute("aria-pressed", quizMode==="mc"); $("#modeCard").setAttribute("aria-pressed", quizMode==="card");
   refreshAll(true);
   showTab(store.get("tab", "kviz"));
+  checkRemote();
 })();
 </script>
 
