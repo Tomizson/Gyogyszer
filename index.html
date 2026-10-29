@@ -32,6 +32,7 @@
   --accent:#4fb3ba; --accent-ink:#06191c; --amber:#f0a92f; --amber-soft:#3a2c12;
   --good:#5cc489; --good-soft:#14301f; --bad:#ff8a80; --bad-soft:#3a1715; color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
 .wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -95,6 +96,26 @@ td.num{font-family:var(--f-mono);font-weight:500}
 .note{font-size:12.5px;color:var(--muted);max-width:70ch}
 .wronglist{display:grid;gap:6px;font-size:13.5px}
 .wronglist div{border-bottom:1px dashed var(--line);padding-bottom:6px;white-space:pre-line;overflow-wrap:anywhere}
+.search{font:500 16px var(--f-body);padding:11px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+.dlist{display:grid;gap:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.ditem{display:grid;gap:2px;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);padding:11px 14px;cursor:pointer;font:inherit;min-width:0}
+.ditem:last-child{border-bottom:0}
+.ditem:hover{background:var(--bg)}
+.ditem b{font-family:var(--f-display);font-size:19px;letter-spacing:.03em;text-transform:uppercase;line-height:1.15}
+.ditem span{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ditem mark,.dsec mark{background:var(--amber-soft);color:inherit;border-radius:2px}
+.dhead{display:grid;gap:4px}
+.dhead h3{font-family:var(--f-display);font-weight:700;font-size:34px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1.05;text-wrap:balance}
+.dhead .brands{color:var(--muted);font-weight:500}
+.dsec{display:grid;gap:6px;min-width:0}
+.dsec .val{white-space:pre-line;overflow-wrap:anywhere}
+.form{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:10px;background:var(--bg);min-width:0}
+.form .fh{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+.form .fh b{font-weight:600}
+.form .fh .pk{font-family:var(--f-mono);font-size:13.5px;white-space:pre-line}
+.dose2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.dose2>div{min-width:0}
+.dose2 .val{white-space:pre-line;overflow-wrap:anywhere;font-size:14.5px}
 .toast{font-size:13.5px;padding:10px 12px;border-radius:8px;background:var(--good-soft);color:var(--ink)}
 .toast.err{background:var(--bad-soft)}
 @media (prefers-reduced-motion:no-preference){.opt,.chip,.btn{transition:background .15s,border-color .15s}}
@@ -105,6 +126,7 @@ td.num{font-family:var(--f-mono);font-weight:500}
   <div class="wrap">
     <div class="brand"><h1>Gyógyszer<span>dózis</span> gyakorló</h1><div class="score" id="score"></div></div>
     <nav class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-tab="gyogy">Gyógyszerek</button>
       <button role="tab" data-tab="kviz">Kvíz</button>
       <button role="tab" data-tab="szorzas">Számolás</button>
       <button role="tab" data-tab="perf">Perfúzor</button>
@@ -115,6 +137,17 @@ td.num{font-family:var(--f-mono);font-weight:500}
 </header>
 
 <div class="wrap"><main id="main">
+
+<!-- GYÓGYSZEREK -->
+<section data-panel="gyogy" class="panel" hidden>
+  <div id="gyList" style="display:grid;gap:12px">
+    <h2>Gyógyszerek</h2>
+    <input class="search" id="gySearch" type="search" placeholder="Keresés: hatóanyag, gyári név, indikáció…" autocomplete="off" aria-label="Keresés a gyógyszerek között">
+    <div class="note" id="gyCount"></div>
+    <div class="dlist" id="gyItems"></div>
+  </div>
+  <div id="gyDetail" hidden style="display:grid;gap:14px"></div>
+</section>
 
 <!-- KVÍZ -->
 <section data-panel="kviz" class="panel" hidden>
@@ -314,6 +347,7 @@ function extractEntries(drugs){
           found = true; const n = num(m[1]); if(n > 0) add(1/n, isRate ? "ml/h" : (/ml/i.test(line) ? "ml" : ""), "", m[0]);
         }
         if(/:\s*$/.test(line) && !found) prefix = line.replace(/:\s*$/, ":");
+        else if(/^[^:]{2,40}:\s*\S/.test(line)) prefix = "";
       }
     }
   });
@@ -348,6 +382,79 @@ function showTab(t){
   if(t === "tabla") renderTable();
 }
 $("#tabs").addEventListener("click", e => { const b = e.target.closest("button"); if(b) showTab(b.dataset.tab); });
+
+
+/* ---------- GYÓGYSZEREK ---------- */
+const fold = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function hl(text, q){
+  const s = esc(text); if(!q) return s;
+  const f = fold(text); const i = f.indexOf(q); if(i < 0) return s;
+  return esc(text.slice(0, i)) + "<mark>" + esc(text.slice(i, i + q.length)) + "</mark>" + esc(text.slice(i + q.length));
+}
+function drugHaystack(d){
+  return [d.name, d.brands.join(" "), d.ind, d.ki, d.mh, d.kh, d.egyeb, ...d.forms.flatMap(f => [f.pack, f.adult, f.child])].join("\n");
+}
+function renderDrugList(){
+  const q = fold($("#gySearch").value.trim());
+  const rows = [];
+  for(const d of DRUGS){
+    let hit = "", rank = 0;
+    if(q){
+      if(fold(d.name).includes(q)) rank = 3;
+      else if(fold(d.brands.join(" ")).includes(q)) rank = 2;
+      else {
+        const line = drugHaystack(d).split("\n").find(l => fold(l).includes(q));
+        if(!line) continue;
+        rank = 1; hit = line.trim();
+      }
+    }
+    rows.push({d, hit, rank});
+  }
+  if(q) rows.sort((a, b) => b.rank - a.rank);
+  $("#gyCount").textContent = q ? `${rows.length} találat` : `${DRUGS.length} hatóanyag`;
+  $("#gyItems").innerHTML = rows.length ? rows.map(({d, hit}) => `<button class="ditem" data-id="${d.id}"><b>${hl(d.name, q)}</b><span>${hit ? hl(hit, q) : hl(d.brands.join(", ") || d.ind.split("\n")[0], q)}</span></button>`).join("")
+    : `<div class="ditem" style="cursor:default"><span>Nincs találat.</span></div>`;
+}
+$("#gySearch").addEventListener("input", renderDrugList);
+$("#gyItems").addEventListener("click", e => { const b = e.target.closest("button[data-id]"); if(b) openDrug(+b.dataset.id); });
+
+function openDrug(id){
+  const d = DRUGS[id]; if(!d) return;
+  showTab("gyogy");
+  const q = fold($("#gySearch").value.trim());
+  const sec = (label, v) => v ? `<div class="dsec"><div class="eyebrow">${label}</div><div class="val">${hl(v, q)}</div></div>` : "";
+  const forms = d.forms.map(f => `<div class="form">
+      <div class="fh">${f.brand ? `<b>${hl(f.brand, q)}</b>` : ""}${f.pack ? `<span class="pk">${hl(f.pack, q)}</span>` : ""}</div>
+      <div class="dose2">
+        <div><div class="eyebrow">Felnőtt dózis</div><div class="val">${f.adult ? hl(f.adult, q) : "–"}</div></div>
+        <div><div class="eyebrow">Gyermek dózis</div><div class="val">${f.child ? hl(f.child, q) : "–"}</div></div>
+      </div></div>`).join("");
+  const hasKg = ENTRIES.some(e => e.drug === d);
+  const el = $("#gyDetail");
+  el.innerHTML = `<div class="row"><button class="btn ghost" id="gyBack">← Vissza a listához</button></div>
+    <div class="card">
+      <div class="dhead"><h3>${esc(d.name)}</h3>${d.brands.length ? `<div class="brands">${esc(d.brands.join(", "))}</div>` : ""}</div>
+      <div class="dsec"><div class="eyebrow">Kiszerelés és dózis</div>${forms}</div>
+      ${sec("Indikáció", d.ind)}${sec("Kontraindikáció", d.ki)}${sec("Mellékhatás", d.mh)}${sec("Gyógyszerkölcsönhatás", d.kh)}${sec("Egyéb megjegyzés", d.egyeb)}
+    </div>
+    ${hasKg ? `<div class="card"><div class="eyebrow">Számolás testtömegre</div>
+      <label class="f" style="max-width:200px">Testtömeg (kg)<input id="gyW" inputmode="decimal" value="${esc(store.get("gyW", "70"))}"></label>
+      <ul class="uses" id="gyUses"></ul>
+      <div class="row"><button class="btn ghost" id="gyTbl">Testtömeg-táblázat</button></div></div>` : ""}`;
+  $("#gyList").hidden = true; el.hidden = false;
+  $("#gyBack").onclick = closeDrug;
+  if(hasKg){
+    const upd = () => {
+      const w = num($("#gyW").value); store.set("gyW", $("#gyW").value);
+      const seen = new Set();
+      $("#gyUses").innerHTML = ENTRIES.filter(e => e.drug === d).filter(e => { const k = [e.fi, e.grp, e.ctx, e.factor.toFixed(6), e.unit, e.per].join("|"); if(seen.has(k)) return false; seen.add(k); return true; }).map(x => useItem(x, isFinite(w) && w > 0 ? w : null)).join("");
+    };
+    $("#gyW").addEventListener("input", upd); upd();
+    $("#gyTbl").onclick = () => { $("#tbDrug").value = d.id; store.set("tbDrug", d.name); showTab("tabla"); };
+  }
+  window.scrollTo(0, 0);
+}
+function closeDrug(){ $("#gyDetail").hidden = true; $("#gyList").hidden = false; }
 
 /* ---------- KVÍZ ---------- */
 const QTYPES = [
@@ -426,14 +533,16 @@ function nextQuestion(){
       c.querySelectorAll(".opt").forEach(x => { x.disabled = true; if(q.opts[+x.dataset.i] === q.right) x.classList.add("right"); });
       if(!ok){ b.classList.add("wrong"); logWrong(q); }
       addScore(ok);
-      $("#qFoot").innerHTML = `<div class="row" style="justify-content:space-between"><span class="verdict ${ok ? "ok" : "no"}">${ok ? "Helyes." : "Nem ez. A helyes válasz zölddel jelölve."}</span><button class="btn" id="qNext">Következő</button></div>`;
+      $("#qFoot").innerHTML = `<div class="row" style="justify-content:space-between"><span class="verdict ${ok ? "ok" : "no"}">${ok ? "Helyes." : "Nem ez. A helyes válasz zölddel jelölve."}</span><div class="row"><button class="btn ghost" id="qInfo">Adatlap</button><button class="btn" id="qNext">Következő</button></div></div>`;
       $("#qNext").onclick = nextQuestion; $("#qNext").focus();
+      $("#qInfo").onclick = () => openDrug(q.d.id);
     });
   } else {
     c.innerHTML = head + `<div id="qFoot"><button class="btn" id="qShow">Mutasd a választ</button></div>`;
     $("#qShow").onclick = () => {
       $("#qFoot").innerHTML = `<div class="answer">${esc(q.right)}</div>
-        <div class="row" style="margin-top:12px"><button class="btn" id="qYes">Tudtam</button><button class="btn ghost" id="qNo">Nem tudtam</button></div>`;
+        <div class="row" style="margin-top:12px"><button class="btn" id="qYes">Tudtam</button><button class="btn ghost" id="qNo">Nem tudtam</button><button class="btn ghost" id="qInfo">Adatlap</button></div>`;
+      $("#qInfo").onclick = () => openDrug(q.d.id);
       $("#qYes").onclick = () => { addScore(true); nextQuestion(); };
       $("#qNo").onclick = () => { addScore(false); logWrong(q); nextQuestion(); };
     };
@@ -490,13 +599,6 @@ function useItem(x, w){
     const r = x.factor * w;
     res = `${w} kg → <span class="res">${fmt(r)} ${esc(unitLabel(x))}</span>`;
     if(x.cap && !x.per && x.unit === x.cap.unit && r > x.cap.v) res += ` <span class="warn">max ${fmt(x.cap.v)} ${esc(x.cap.unit)}!</span>`;
-    const pc = packConc(x.form.pack);
-    if(pc && pc.vol && !x.per && TO_MG[x.unit] && TO_MG[pc.unit]){
-      const ml = r * TO_MG[x.unit] / (pc.amt * TO_MG[pc.unit] / pc.vol);
-      res += ` <span class="note">(= ${fmt(ml)} ml hígítatlan ampullából)</span>`;
-    } else if(pc && pc.vol && !x.per && x.unit === "NE" && pc.unit === "NE"){
-      res += ` <span class="note">(= ${fmt(r / (pc.amt / pc.vol))} ml hígítatlanul)</span>`;
-    }
   }
   return `<li><b>${esc(x.drug.name)}</b><span class="tag">${x.grp}</span>${x.form.pack ? ` <span class="note">${esc(x.form.pack.split("\n")[0])}</span>` : ""}
     <div class="ctx">${esc(x.ctx)}</div>${res ? `<div>${res}</div>` : ""}</li>`;
@@ -691,7 +793,7 @@ $("#resetSrc").onclick = () => {
 };
 
 function refreshAll(full){
-  if(full){ renderChips(); renderSrc(); renderTableSelect(); }
+  if(full){ renderChips(); renderSrc(); renderTableSelect(); renderDrugList(); closeDrug(); }
   nextQuestion(); nextMath(); nextPerf();
   if(!$("[data-panel=tabla]").hidden) renderTable();
 }
@@ -704,7 +806,7 @@ function refreshAll(full){
   renderQtypes(); setMx(); renderScore(); calcPerf();
   $("#modeMc").setAttribute("aria-pressed", quizMode==="mc"); $("#modeCard").setAttribute("aria-pressed", quizMode==="card");
   refreshAll(true);
-  showTab(store.get("tab", "kviz"));
+  showTab(store.get("tab", "gyogy"));
   checkRemote();
 })();
 </script>
